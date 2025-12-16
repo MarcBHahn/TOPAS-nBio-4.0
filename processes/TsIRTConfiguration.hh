@@ -96,7 +96,7 @@ private:
 	std::map<G4String, G4int> fMoleculesID;
 	std::map<G4int, G4String> fMoleculesName;
 	std::map<G4String, G4String> fExistingMolecules;
-	std::map<G4String, G4String> fGeant4NameOverrides;
+	std::unordered_map<std::string, std::string> fGeant4NameOverrides;
 	std::set<G4String> fLoggedOverrides;
 	
 	std::map<G4int, TsMolecularReaction > fReactions;
@@ -118,6 +118,7 @@ private:
 	
 	G4bool fAllTotallyDiffusionControlled;
 	
+	void RegisterGeant4Aliases();
 public:
 	
 	G4double GetIndependentReactionTime(TsMolecule molA, TsMolecule molB, G4int indexOfReaction);

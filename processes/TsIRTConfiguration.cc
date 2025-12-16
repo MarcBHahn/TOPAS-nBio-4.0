@@ -75,6 +75,8 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 	AddMolecule("O3^0",    2.0e9*nm*nm/s,  0, 0.20*nm);
 	AddMolecule("None",    0.0e9*nm*nm/s,  0, 0.00*nm);
 	
+	RegisterGeant4Aliases();
+	
 	// Re-set diffusion coefficient, radius and/or charge.
 	std::vector<G4String>* moleculeNames = new std::vector<G4String>;
 	fPm->GetParameterNamesStartingWith("Mo/", moleculeNames);
@@ -424,16 +426,29 @@ void TsIRTConfiguration::AddMolecule(G4String name, G4double diffusionCoefficien
 
 
 G4String TsIRTConfiguration::NormalizeMoleculeName(const G4String& name) {
-	auto it = fGeant4NameOverrides.find(name);
+	const std::string key = name;
+	auto it = fGeant4NameOverrides.find(key);
 	if (it != fGeant4NameOverrides.end()) {
 		if (fLoggedOverrides.find(name) == fLoggedOverrides.end()) {
 			//G4cout << "TsIRTConfiguration: remapping Geant4 molecule name '" << name
 			//	   << "' to '" << it->second << "'" << G4endl;
 			fLoggedOverrides.insert(name);
 		}
-		return it->second;
+		return it->second.c_str();
 	}
 	return name;
+}
+
+void TsIRTConfiguration::RegisterGeant4Aliases() {
+	for (const auto& overridePair : fGeant4NameOverrides) {
+		const G4String alias = overridePair.first.c_str();
+		const G4String canonical = overridePair.second.c_str();
+		auto idIt = fMoleculesID.find(canonical);
+		if (idIt != fMoleculesID.end()) {
+			fMoleculesID[alias] = idIt->second;
+			fExistingMolecules[alias] = canonical;
+		}
+	}
 }
 
 
