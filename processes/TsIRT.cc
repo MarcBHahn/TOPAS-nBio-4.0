@@ -26,7 +26,7 @@
 #include <set>
 
 TsIRT::TsIRT(TsParameterManager* pM, G4String parmName): TsVIRTProcedure(pM,parmName){
-	fReactionConf = new TsIRTConfiguration(parmName, pM);
+	//fReactionConf = new TsIRTConfiguration(parmName, pM);
 
 	fSpeciesIndex = 0;
 	fMoleculesName = fReactionConf->GetMoleculeNames();
@@ -123,7 +123,7 @@ void TsIRT::AddMolecule(G4Track* aTrack, G4double time, G4int moleculeID, G4Thre
 TsIRTConfiguration::TsMolecule TsIRT::ConstructMolecule(G4Track* aTrack, G4double time, G4int moleculeID, G4ThreeVector offset) {
 	G4int pdg = -1;
 	G4ThreeVector position = aTrack->GetPosition();
-	const G4String& name = GetMolecule(aTrack)->GetName();
+	G4String name = fReactionConf->NormalizeMoleculeName(GetMolecule(aTrack)->GetName());
 	pdg = fMoleculesIDs[name];
 
 	TsIRTConfiguration::TsMolecule aMol;

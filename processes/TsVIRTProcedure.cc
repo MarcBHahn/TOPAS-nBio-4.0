@@ -200,7 +200,7 @@ void TsVIRTProcedure::AddMolecule(TsIRTConfiguration::TsMolecule aMol) {
 void TsVIRTProcedure::AddMolecule(G4Step* aStep, G4double time, G4int moleculeID, G4ThreeVector offset) {
 	G4int pdg = -1;
 	G4ThreeVector position = aStep->GetPreStepPoint()->GetPosition();
-	const G4String& name = GetMolecule(aStep->GetTrack())->GetName();
+	G4String name = fReactionConf->NormalizeMoleculeName(GetMolecule(aStep->GetTrack())->GetName());
 	
 	pdg = fMoleculesIDs[name];
 	
@@ -228,7 +228,7 @@ void TsVIRTProcedure::AddMolecule(G4Step* aStep, G4double time, G4int moleculeID
 void TsVIRTProcedure::AddMolecule(G4Track* aTrack, G4double time, G4int moleculeID, G4ThreeVector offset, G4bool isDNA) {
 	G4int pdg = -1;
 	G4ThreeVector position = aTrack->GetPosition();
-	const G4String& name = GetMolecule(aTrack)->GetName();
+	G4String name = fReactionConf->NormalizeMoleculeName(GetMolecule(aTrack)->GetName());
 	
 	pdg = fMoleculesIDs[name];
 	      
@@ -255,7 +255,7 @@ void TsVIRTProcedure::AddMolecule(G4Track* aTrack, G4double time, G4int molecule
 void TsVIRTProcedure::AddMolecule(G4Track* aTrack, G4double time, G4int moleculeID, G4ThreeVector offset) {
 	G4int pdg = -1;
 	G4ThreeVector position = aTrack->GetPosition();
-	const G4String& name = GetMolecule(aTrack)->GetName();
+	G4String name = fReactionConf->NormalizeMoleculeName(GetMolecule(aTrack)->GetName());
 	
 	pdg = fMoleculesIDs[name];
 	
@@ -282,7 +282,7 @@ void TsVIRTProcedure::AddMolecule(G4Track* aTrack, G4double time, G4int molecule
 void TsVIRTProcedure::AddMolecule(const G4Track* aTrack, G4double time, G4int moleculeID, G4ThreeVector offset) {
 	G4int pdg = -1;
 	G4ThreeVector position = aTrack->GetPosition();
-	const G4String& name = GetMolecule(aTrack)->GetName();
+	G4String name = fReactionConf->NormalizeMoleculeName(GetMolecule(aTrack)->GetName());
 	
 	pdg = fMoleculesIDs[name];
 	
@@ -309,7 +309,7 @@ void TsVIRTProcedure::AddMolecule(const G4Track* aTrack, G4double time, G4int mo
 TsIRTConfiguration::TsMolecule TsVIRTProcedure::ConstructMolecule(G4Track* aTrack, G4double time, G4int moleculeID, G4ThreeVector offset) {
 	G4int pdg = -1;
 	G4ThreeVector position = aTrack->GetPosition();
-	const G4String& name = GetMolecule(aTrack)->GetName();
+	G4String name = fReactionConf->NormalizeMoleculeName(GetMolecule(aTrack)->GetName());
 	pdg = fMoleculesIDs[name];
 
 	TsIRTConfiguration::TsMolecule aMol;

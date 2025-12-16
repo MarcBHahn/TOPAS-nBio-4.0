@@ -241,7 +241,7 @@ void TsEmDNAPhysics::ConstructProcess()
                         G4DNAPTBElasticModel* modelDNAPTBElastic = new G4DNAPTBElasticModel("THF/TMP/PY", particle);
                         
                         G4DNAModelInterface* e_elasticInteraction = new G4DNAModelInterface("e-_elastic_interaction");
-                        e_elasticInteraction->RegisterModel(e_modelDNARutherfordElastic, particle);
+                        e_elasticInteraction->RegisterModel(e_modelDNARutherfordElastic);
                         e_elasticInteraction->RegisterModel(modelDNAPTBElastic);
                         e_elasticInteraction->RegisterModel(new G4DNAVacuumModel());
                         
@@ -255,7 +255,7 @@ void TsEmDNAPhysics::ConstructProcess()
                         G4DNAPTBElasticModel* modelDNAPTBElastic = new G4DNAPTBElasticModel("THF/TMP/PY", particle);
                         
                         G4DNAModelInterface* e_elasticInteraction = new G4DNAModelInterface("e-_elastic_interaction");
-                        e_elasticInteraction->RegisterModel(e_modelDNACPA100Model, particle);
+                        e_elasticInteraction->RegisterModel(e_modelDNACPA100Model);
                         e_elasticInteraction->RegisterModel(modelDNAPTBElastic);
                         e_elasticInteraction->RegisterModel(new G4DNAVacuumModel());
                         
@@ -270,7 +270,7 @@ void TsEmDNAPhysics::ConstructProcess()
                         G4DNAPTBElasticModel* modelDNAPTBElastic = new G4DNAPTBElasticModel("THF/TMP/PY", particle);
                         
                         G4DNAModelInterface* e_elasticInteraction = new G4DNAModelInterface("e-_elastic_interaction");
-                        e_elasticInteraction->RegisterModel(e_modelDNAUeharaScreenedRutherfordElastic, particle);
+                        e_elasticInteraction->RegisterModel(e_modelDNAUeharaScreenedRutherfordElastic);
                         e_elasticInteraction->RegisterModel(modelDNAPTBElastic);
                         e_elasticInteraction->RegisterModel(new G4DNAVacuumModel());
                         
@@ -347,7 +347,7 @@ void TsEmDNAPhysics::ConstructProcess()
                         G4DNAPTBExcitationModel* modelDNAPTBExcitation = new G4DNAPTBExcitationModel("THF/TMP/PY",particle);
                         G4DNAModelInterface* e_excitationInteraction = new G4DNAModelInterface("e-_excitation_interaction");
                         
-                        e_excitationInteraction->RegisterModel(e_modelDNAEmfietzoglouExcitation,particle);
+                        e_excitationInteraction->RegisterModel(e_modelDNAEmfietzoglouExcitation);
                         e_excitationInteraction->RegisterModel(modelDNAPTBExcitation);
                         e_excitationInteraction->RegisterModel(new G4DNAVacuumModel());
                         
@@ -360,7 +360,7 @@ void TsEmDNAPhysics::ConstructProcess()
                         G4DNAPTBExcitationModel* modelDNAPTBExcitation = new G4DNAPTBExcitationModel("THF/TMP/PY",particle);
                         G4DNAModelInterface* e_excitationInteraction = new G4DNAModelInterface("e-_excitation_interaction");
                         
-                        e_excitationInteraction->RegisterModel(e_modelDNABornExcitation,particle);
+                        e_excitationInteraction->RegisterModel(e_modelDNABornExcitation);
                         e_excitationInteraction->RegisterModel(modelDNAPTBExcitation);
                         e_excitationInteraction->RegisterModel(new G4DNAVacuumModel());
                         
@@ -454,7 +454,7 @@ void TsEmDNAPhysics::ConstructProcess()
                         G4DNAPTBIonisationModel* modelDNAPTBIonisation = new G4DNAPTBIonisationModel("THF/TMP/PY",particle);
                         
                         G4DNAModelInterface* e_ionisationInteraction = new G4DNAModelInterface("e-_ionisation_interaction");
-                        e_ionisationInteraction->RegisterModel(e_modelDNAEmfietzoglouIonisation,particle);
+                        e_ionisationInteraction->RegisterModel(e_modelDNAEmfietzoglouIonisation);
                         e_ionisationInteraction->RegisterModel(modelDNAPTBIonisation);
                         e_ionisationInteraction->RegisterModel(new G4DNAVacuumModel());
                         
@@ -482,7 +482,7 @@ void TsEmDNAPhysics::ConstructProcess()
                         G4DNAPTBIonisationModel* modelDNAPTBIonisation = new G4DNAPTBIonisationModel("THF/TMP/PY",particle);
                         
                         G4DNAModelInterface* e_ionisationInteraction = new G4DNAModelInterface("e-_ionisation_interaction");
-                        e_ionisationInteraction->RegisterModel(e_modelDNABornIonisation,particle);
+                        e_ionisationInteraction->RegisterModel(e_modelDNABornIonisation);
                         e_ionisationInteraction->RegisterModel(modelDNAPTBIonisation);
                         e_ionisationInteraction->RegisterModel(new G4DNAVacuumModel());
                         

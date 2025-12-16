@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <set>
 
 class TsParameterManager;
 class TsIRTUtils;
@@ -24,7 +25,7 @@ public:
 	void InsertBackgroundReaction(G4String, G4String, std::vector<G4int>,
 								  G4double, G4double, G4bool);
 	void SetTimeLimits(G4double, G4double);
-
+	G4String NormalizeMoleculeName(const G4String& name);
 	
 
 	void QuitIfMoleculeNotFound(G4String mol);
@@ -95,6 +96,8 @@ private:
 	std::map<G4String, G4int> fMoleculesID;
 	std::map<G4int, G4String> fMoleculesName;
 	std::map<G4String, G4String> fExistingMolecules;
+	std::map<G4String, G4String> fGeant4NameOverrides;
+	std::set<G4String> fLoggedOverrides;
 	
 	std::map<G4int, TsMolecularReaction > fReactions;
 	std::map<G4int, std::vector<std::pair<G4int,G4int>>> fMoleculeCanReactWith;
@@ -165,4 +168,3 @@ public:
 
 };
 #endif
-

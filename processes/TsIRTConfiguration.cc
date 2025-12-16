@@ -47,6 +47,16 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 	fExistingMolecules["trioxide"]         = "O3^-1";
 	fExistingMolecules["ozone"]            = "O3^0";
 	fExistingMolecules["none"]             = "None";
+
+	// Normalize Geant4 molecule naming to the canonical TOPAS-nBio names.
+	fGeant4NameOverrides["\u00b0OH^0"]   = "OH^0";
+	fGeant4NameOverrides["H_O2\u00b0^0"] = "HO2^0";
+	fGeant4NameOverrides["O_2^0"] = "O2^0";
+	fGeant4NameOverrides["O_2^-1"] = "O2^-1";
+	fGeant4NameOverrides["O_3^0"] = "O3^0";
+	fGeant4NameOverrides["O_3^-1"] = "O3^-1";
+	fGeant4NameOverrides["\u00b0O^0"] = "O^0";
+	fGeant4NameOverrides["O\u00b0^-1"] = "O^-1";
 	
 	AddMolecule("H^0",     7.0e9*nm*nm/s,   0, 0.19*nm);
 	AddMolecule("OH^0",    2.2e9*nm*nm/s,   0, 0.22*nm);
@@ -323,6 +333,9 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		InsertBackgroundReaction(reactorA, reactorB,vProduct,reactionRate,concentration,false);
 	}
 	
+    ResolveReactionParameters();
+    PrintReactionsInformation();
+    
 	// Re-scale chemistry parameters based on temperature
 	parName = "Ch/" + chemistryList + "/Temperature";
 	fScaleForTemperature = false;
@@ -336,33 +349,39 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 			fKick = fPm->GetBooleanParameter(parName);
 		
 		AdjustReactionAndDiffusionRateForTemperature();
+        G4cout << "======================================== performed Temperature Scaling ===========================================" << G4endl;
+        ResolveReactionParameters();
+        PrintReactionsInformation();
 	}
-	
-	if ( fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesFromSubstance") ) {
-		fpHSolventConcentration = 0.0;
-		fpHValue                = 7.1;
-		
-		fpHSolvent = fPm->GetStringParameter("Ch/"+chemistryList+"/ModelAcidPropertiesFromSubstance");
-		G4StrUtil::to_lower(fpHSolvent);
-		if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration") &&
-			fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH")) {
-			G4String message = "Cannot be defined when parameter: Ch/" + chemistryList + "/ModelAcidPropertiesWithConcentration is used.";
-			Quit("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH",message);
-		}
-		
-		if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration") ) {
-			fpHSolventConcentration = fPm->GetDoubleParameter("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration","molar concentration");
-			AdjustReactionRateForPH("Concentration");
-		}
-		
-		if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH") ) {
-			fpHValue = fPm->GetUnitlessParameter("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH");
-			AdjustReactionRateForPH("PH");
-		}
-	}
-
-	ResolveReactionParameters();
-	PrintReactionsInformation();
+    
+    
+    
+    if ( fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesFromSubstance") ) {
+        fpHSolventConcentration = 0.0;
+        fpHValue                = 7.1;
+        
+        fpHSolvent = fPm->GetStringParameter("Ch/"+chemistryList+"/ModelAcidPropertiesFromSubstance");
+        G4StrUtil::to_lower(fpHSolvent);
+        if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration") &&
+            fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH")) {
+            G4String message = "Cannot be defined when parameter: Ch/" + chemistryList + "/ModelAcidPropertiesWithConcentration is used.";
+            Quit("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH",message);
+        }
+        
+        if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration") ) {
+            fpHSolventConcentration = fPm->GetDoubleParameter("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration","molar concentration");
+            AdjustReactionRateForPH("Concentration");
+        }
+        
+        if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH") ) {
+            fpHValue = fPm->GetUnitlessParameter("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH");
+            AdjustReactionRateForPH("PH");
+        }
+        
+        G4cout << "======================================== performed ph Scaling ===========================================" << G4endl;
+        ResolveReactionParameters();
+        PrintReactionsInformation();
+    }
 }
 
 
@@ -401,6 +420,20 @@ void TsIRTConfiguration::AddMolecule(G4String name, G4double diffusionCoefficien
 	}
 	
 	if ( !found ) fExistingMolecules[name] = name;
+}
+
+
+G4String TsIRTConfiguration::NormalizeMoleculeName(const G4String& name) {
+	auto it = fGeant4NameOverrides.find(name);
+	if (it != fGeant4NameOverrides.end()) {
+		if (fLoggedOverrides.find(name) == fLoggedOverrides.end()) {
+			//G4cout << "TsIRTConfiguration: remapping Geant4 molecule name '" << name
+			//	   << "' to '" << it->second << "'" << G4endl;
+			fLoggedOverrides.insert(name);
+		}
+		return it->second;
+	}
+	return name;
 }
 
 
@@ -487,6 +520,7 @@ void TsIRTConfiguration::ResolveReactionParameters() {
 
 			kdiff = 4 * pi * sumDiffCoeff * effectiveReactionRadius * Avogadro;
 
+            /*
             if ( kobs >= kdiff ) {
                 G4cout << "TOPAS-nBio is exiting due to an error in Chemistry setup for reaction type " << reactionType << ":" <<G4endl;
                 G4cout << "  " << GetMoleculeNameFromMoleculeID(molA) << " + "
@@ -496,8 +530,7 @@ void TsIRTConfiguration::ResolveReactionParameters() {
                 G4cout << "This causes (kdif-kobs) negative or zero. When defining kact, it set the reaction probability to unrealistic values. Adjust rate or type." << G4endl;
                 fPm->AbortSession(1);
             }
-            
-            // <<< add diagnostic here
+        
             G4double ratio = kobs / kdiff;
             if (ratio > 0.5) {
                 G4cout << "IRT: type " << reactionType << " "
@@ -511,6 +544,7 @@ void TsIRTConfiguration::ResolveReactionParameters() {
                 G4cout << GetMoleculeNameFromMoleculeID(molA) << " " << GetMoleculeNameFromMoleculeID(molB) << G4endl;
                 fPm->AbortSession(1);
             }
+            */
             
 			kact = kdiff * kobs / (kdiff - kobs);
 
@@ -1262,116 +1296,179 @@ void TsIRTConfiguration::AdjustReactionAndDiffusionRateForTemperature() {
 }
 
 void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
-	std::vector<G4double> AcidComponents;
-	G4double Ionic   = 0.0;
-	G4double HCon    = 0.0;
-	G4double HCon25  = 1.00E-7;
-	G4double OHCon   = 0.0;
-	G4double OHCon25 = 1.00E-7;
-	G4double HSO4Con = 0.0;
+    std::vector<G4double> AcidComponents;
+    G4double Ionic   = 0.0;
+    G4double HCon    = 0.0;
+    G4double HCon25  = 1.00E-7;
+    G4double OHCon   = 0.0;
+    G4double OHCon25 = 1.00E-7;
+    G4double HSO4Con = 0.0;
+    
+    if (pHOrConcentration == "PH" && fpHSolvent == "h2so4") {
+        AcidComponents = GetH2SO4ComponentsConcentrationPH(fpHValue);
+        Ionic          = GetIonicStrength(AcidComponents);
+        HCon           = AcidComponents[0];
+        HSO4Con        = AcidComponents[1];
+        OHCon          = AcidComponents[3];
+        G4cout << "-- Adjust for PH of H2SO4 " << G4endl;
+        
+    }
+    
+    else if (pHOrConcentration == "Concentration" && fpHSolvent == "h2so4") {
+        AcidComponents = GetH2SO4ComponentsConcentrationP(fpHSolventConcentration/fPm->GetUnitValue("M"));
+        Ionic          = GetIonicStrength(AcidComponents);
+        HCon           = AcidComponents[0];
+        HSO4Con        = AcidComponents[1];
+        OHCon          = AcidComponents[3];
+        G4cout << "-- Adjust for Concentration of H2SO4 " << G4endl;
+    }
+    
+    else if (fpHSolvent == "generic") {
+        HCon  = pow(10,-fpHValue);
+        OHCon = 1E-14 / HCon;
+        AcidComponents = {HCon, 0.0, 0.0, OHCon, 0.0, 0.0};
+        Ionic          = GetIonicStrength(AcidComponents);
+        G4cout << "-- Adjust for a generic substance " << G4endl;
+        
+    } else {
+        G4cout << "-- Is doing nothing " << pHOrConcentration << " " << fpHSolvent << G4endl;
+    }
+    
+    G4cout << G4endl;
+    G4cout << " ###-------- pH Scaling Starts ---------###" << G4endl;
+    
+    for(size_t i = 0; i < fReactions.size(); i++) {
+        G4int chargeA   = fMoleculesDefinition[fReactions[i].reactorA].charge;
+        G4int chargeB   = fMoleculesDefinition[fReactions[i].reactorB].charge;
+        
+        if ( chargeA == 0 && chargeB == 0 ) // No scaling in neutral  molecules
+            continue;
+        /*
+        if ( fReactions[i].reactionType != 6 ) { // scaling only for charged molecules, no scavegers
+            if (chargeA * chargeB == 0 ) {
+                continue;
+            }
+        }
+        */
+        G4String ReactA = fMoleculesName[fReactions[i].reactorA];
+        G4String ReactB = fMoleculesName[fReactions[i].reactorB];
+        std::vector<G4String> products;
+        G4double k_Before = 0;
+        
+        for (size_t vsize = 0; vsize < fReactions[i].products.size(); vsize++){
+            products.push_back(fMoleculesName[fReactions[i].products[vsize]]);
+        }
+        
+        fReactions[i].kobs /= fPm->GetUnitValue("/M/s");
+        fReactions[i].scavengingCapacity /= 1/s;
+        
+        /*
+        if ( fReactions[i].reactionType != 6 ) {
+            k_Before = fReactions[i].kobs;
+            fReactions[i].kobs = IonicRate(Ionic, fReactions[i]);
+        } else { // fReactions[i].reactionType == 6
+            if  (ReactB == "H3O^1" ) {
+                k_Before = fReactions[i].scavengingCapacity;
+                fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i])/ 1e-7 * HCon;
+            } else if (ReactB == "OH^-1" ) {
+                k_Before = fReactions[i].scavengingCapacity;
+                fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i])/ 1e-7 * OHCon;
+            } else if (ReactB == "HSO4^-1" ) {
+                k_Before = fReactions[i].scavengingCapacity;
+                fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * HCon / HCon25;
+            } else {
+                G4cout << "========= "<< fReactions[i].reactionType << G4endl;
+                k_Before = fReactions[i].kobs;
+                //                fReactions[i].kobs = fReactions[i].kobs * 1E-7;
+                fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i]);
+            }
+        }*/
+        /*
+         if ((chargeA != 0 && chargeB != 0)) {
+         if (fReactions[i].reactionType != 6) {
+         k_Before = fReactions[i].kobs;
+         fReactions[i].kobs = IonicRate(Ionic, fReactions[i]);
+         }
+         
+         else if (fReactions[i].reactionType == 6 && ReactB == "H3O^1") {
+         k_Before = fReactions[i].scavengingCapacity;
+         fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i])/ 1e-7 * HCon;
+         }
+         
+         else if (fReactions[i].reactionType == 6 && ReactB == "OH^-1") {
+         k_Before = fReactions[i].scavengingCapacity;
+         fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i])/ 1e-7 * OHCon;
+         }
+         
+         else {
+         G4cout << "========= "<< fReactions[i].reactionType << G4endl;
+         k_Before = fReactions[i].kobs;
+         //                fReactions[i].kobs = fReactions[i].kobs * 1E-7;
+         fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i]);
+         }
+         }
+         
+         else if ((fReactions[i].reactionType == 6) && (ReactB == "H3O^1")) {
+         k_Before = fReactions[i].scavengingCapacity;
+         fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * HCon / HCon25;
+         }
+         
+         else if ((fReactions[i].reactionType == 6) && (ReactB == "OH^-1")) {
+         k_Before = fReactions[i].scavengingCapacity;
+         fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * OHCon / OHCon25;
+         }
+         
+         else if ((fReactions[i].reactionType == 6) && (ReactB == "HSO4^-1")) {
+         k_Before = fReactions[i].scavengingCapacity;
+         fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * HSO4Con;
+         }
+         */
+        const bool chargedPair  = (chargeA != 0 && chargeB != 0);
+        const bool isScavenging = (fReactions[i].reactionType == 6);
+        auto setScavenging = [&](G4double newValue) {
+            k_Before = fReactions[i].scavengingCapacity;
+            fReactions[i].scavengingCapacity = newValue;
+        };
 
-	if (pHOrConcentration == "PH" && fpHSolvent == "h2so4") {
-		AcidComponents = GetH2SO4ComponentsConcentrationPH(fpHValue);
-		Ionic          = GetIonicStrength(AcidComponents);
-		HCon           = AcidComponents[0];
-		HSO4Con        = AcidComponents[1];
-		OHCon          = AcidComponents[3];
-		G4cout << "-- Adjust for PH of H2SO4 " << G4endl;
-
-	}
-
-	else if (pHOrConcentration == "Concentration" && fpHSolvent == "h2so4") {
-		AcidComponents = GetH2SO4ComponentsConcentrationP(fpHSolventConcentration/fPm->GetUnitValue("M"));
-		Ionic          = GetIonicStrength(AcidComponents);
-		HCon           = AcidComponents[0];
-		HSO4Con        = AcidComponents[1];
-		OHCon          = AcidComponents[3];
-		G4cout << "-- Adjust for Concentration of H2SO4 " << G4endl;
-	}
-
-	else if (fpHSolvent == "generic") {
-		HCon  = pow(10,-fpHValue);
-		OHCon = 1E-14 / HCon;
-		AcidComponents = {HCon, 0.0, 0.0, OHCon, 0.0, 0.0};
-		Ionic          = GetIonicStrength(AcidComponents);
-		G4cout << "-- Adjust for a generic substance " << G4endl;
-
-	} else {
-		G4cout << "-- Is doing nothing " << pHOrConcentration << " " << fpHSolvent << G4endl;
-	}
-
-	G4cout << G4endl;
-	G4cout << " ###-------- pH Scaling Starts ---------###" << G4endl;
-
-	for(size_t i = 0; i < fReactions.size(); i++) {
-		G4int chargeA   = fMoleculesDefinition[fReactions[i].reactorA].charge;
-		G4int chargeB   = fMoleculesDefinition[fReactions[i].reactorB].charge;
-		G4String ReactA = fMoleculesName[fReactions[i].reactorA];
-		G4String ReactB = fMoleculesName[fReactions[i].reactorB];
-		std::vector<G4String> products;
-		G4double k_Before = 0;
-
-		for (size_t vsize = 0; vsize < fReactions[i].products.size(); vsize++){
-			products.push_back(fMoleculesName[fReactions[i].products[vsize]]);
-		}
-
-		fReactions[i].kobs /= fPm->GetUnitValue("/M/s");
-		fReactions[i].scavengingCapacity /= 1/s;
-
-		if ((chargeA != 0 && chargeB != 0)) {
-			if (fReactions[i].reactionType != 6) {
-				k_Before = fReactions[i].kobs;
-				fReactions[i].kobs = IonicRate(Ionic, fReactions[i]);
-			}
-
-			else if (fReactions[i].reactionType == 6 && ReactB == "H3O^1") {
-				k_Before = fReactions[i].scavengingCapacity;
-				fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i])/ 1e-7 * HCon;
-			}
-
-			else if (fReactions[i].reactionType == 6 && ReactB == "OH^-1") {
-				k_Before = fReactions[i].scavengingCapacity;
-				fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i])/ 1e-7 * OHCon;
-			}
-
-			else {
-				G4cout << "========= "<< fReactions[i].reactionType << G4endl;
-				k_Before = fReactions[i].kobs;
-//				fReactions[i].kobs = fReactions[i].kobs * 1E-7;
-				fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i]);
-			}
-		}
-
-		else if ((fReactions[i].reactionType == 6) && (ReactB == "H3O^1")) {
-			k_Before = fReactions[i].scavengingCapacity;
-			fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * HCon / HCon25;
-		}
-
-		else if ((fReactions[i].reactionType == 6) && (ReactB == "OH^-1")) {
-			k_Before = fReactions[i].scavengingCapacity;
-			fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * OHCon / OHCon25;
-		}
-
-		else if ((fReactions[i].reactionType == 6) && (ReactB == "HSO4^-1")) {
-			k_Before = fReactions[i].scavengingCapacity;
-			fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * HSO4Con;
-		}
-
-		if (k_Before > 0) {
-			G4cout << " Reaction Type: " << fReactions[i].reactionType << " | Reaction: " << ReactA << " + " << ReactB;
-			for (int prod = 0; prod < (int)products.size(); prod++) {
-				if (prod == 0)
-					G4cout << " -> ";
-				G4cout << products[prod];
-				if (prod < (int)products.size() - 1) {
-					G4cout << " + ";
-				}
-			}
-			if ( fReactions[i].reactionType == 6 )
-				G4cout << G4endl << " ---- scav: " << k_Before << " ---> "  << fReactions[i].scavengingCapacity << G4endl << G4endl;
-			else
-				G4cout << G4endl << " ---- kobs: " << k_Before << " ---> "  << fReactions[i].kobs << G4endl << G4endl;
-		}
+        if (chargedPair) {
+            if (!isScavenging) {
+                k_Before = fReactions[i].kobs;
+                fReactions[i].kobs = IonicRate(Ionic, fReactions[i]);
+            } else if (ReactB == "H3O^1") {
+                setScavenging(IonicRate(Ionic, fReactions[i]) / 1e-7 * HCon);
+            } else if (ReactB == "OH^-1") {
+                setScavenging(IonicRate(Ionic, fReactions[i]) / 1e-7 * OHCon);
+            } else {
+                G4cout << "========= "<< fReactions[i].reactionType << G4endl;
+                k_Before = fReactions[i].kobs;
+                //                fReactions[i].kobs = fReactions[i].kobs * 1E-7;
+                fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i]);
+            }
+        } else if (isScavenging) {
+            if (ReactB == "H3O^1") {
+                setScavenging(fReactions[i].scavengingCapacity * HCon / HCon25);
+            } else if (ReactB == "OH^-1") {
+                setScavenging(fReactions[i].scavengingCapacity * OHCon / OHCon25);
+            } else if (ReactB == "HSO4^-1") {
+                setScavenging(fReactions[i].scavengingCapacity * HSO4Con);
+            }
+        }
+        
+        if (k_Before > 0) {
+            G4cout << " Reaction Type: " << fReactions[i].reactionType << " | Reaction: " << ReactA << " + " << ReactB;
+            for (int prod = 0; prod < (int)products.size(); prod++) {
+                if (prod == 0)
+                    G4cout << " -> ";
+                G4cout << products[prod];
+                if (prod < (int)products.size() - 1) {
+                    G4cout << " + ";
+                }
+            }
+            if ( fReactions[i].reactionType == 6 )
+                G4cout << G4endl << " ---- scav: " << k_Before << " ---> "  << fReactions[i].scavengingCapacity << G4endl << G4endl;
+            else
+                G4cout << G4endl << " ---- kobs: " << k_Before << " ---> "  << fReactions[i].kobs << G4endl << G4endl;
+        }
         // add this guard before units are restored
         if (fReactions[i].reactionType == 2 || fReactions[i].reactionType == 4) {
             G4double kobsUnitless  = fReactions[i].kobs; // still divided by /M/s
@@ -1383,16 +1480,16 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
                 G4cout << "This reaction has kobs >= kdiff after pH scaling (kobs=" << kobsUnitless
                 << ", kdiff=" << kdiffUnitless << ")." << G4endl;
                 G4cout << "This causes (kdif-kobs) negative or zero. When defining kact, it set the reaction probability to unrealistic values. Adjust rate or type." << G4endl;
-                fPm->AbortSession(1);
+                //fPm->AbortSession(1);
             }
         }
         
-		fReactions[i].kobs *= fPm->GetUnitValue("/M/s");
-		fReactions[i].scavengingCapacity *= 1/s;
-	}
-
-	G4cout << " ###-------- pH Scaling Ends ---------###" << G4endl;
-	G4cout << G4endl;
+        fReactions[i].kobs *= fPm->GetUnitValue("/M/s");
+        fReactions[i].scavengingCapacity *= 1/s;
+    }
+    
+    G4cout << " ###-------- pH Scaling Ends ---------###" << G4endl;
+    G4cout << G4endl;
 }
 
 
@@ -1462,6 +1559,9 @@ G4double TsIRTConfiguration::GetOnsagerRadius(G4int molA, G4int molB) {
 
 
 void TsIRTConfiguration::PrintMoleculesInformation() {
+    if (!G4Threading::IsMasterThread())
+        return;
+    
 	for ( auto& molecules : fMoleculesID ) {
 		G4String name = molecules.first;
 		G4int id = molecules.second;
@@ -1481,6 +1581,9 @@ void TsIRTConfiguration::PrintMoleculesInformation() {
 
 void TsIRTConfiguration::PrintReactionsInformation() {
 
+    if (!G4Threading::IsMasterThread())
+        return;
+    
 	G4IosFlagsSaver iosfs(G4cout);
 	std::map<size_t, std::vector<TsMolecularReaction> > temporal;
 	for ( size_t i = 0; i < fReactions.size(); i++) {
