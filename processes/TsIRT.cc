@@ -26,7 +26,6 @@
 #include <set>
 
 TsIRT::TsIRT(TsParameterManager* pM, G4String parmName): TsVIRTProcedure(pM,parmName){
-	//fReactionConf = new TsIRTConfiguration(parmName, pM);
 
 	fSpeciesIndex = 0;
 	fMoleculesName = fReactionConf->GetMoleculeNames();
