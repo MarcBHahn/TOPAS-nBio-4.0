@@ -1,4 +1,4 @@
-# TOPAS-nBio
+# TOPAS-nBio (Version 4.1.0)
 This is the TOPAS-nBio extension repository, a Monte Carlo simulation framework for (sub-) cellular radiobiology.
 
 TOPAS-nBio is described here: https://topas-nbio.readthedocs.io/. 
