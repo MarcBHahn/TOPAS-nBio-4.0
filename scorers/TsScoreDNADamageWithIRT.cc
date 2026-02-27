@@ -213,8 +213,8 @@ void TsScoreDNADamageWithIRT::UserHookForEndOfEvent() {
 		G4int totalSSB = totalDirectSSB + totalIndirectSSB;
 		G4cout << " --- IRT ends " << GetEventID() << G4endl;
 
-		G4int numberOfBasePairs = G4int(totalSpecies/4);
-		G4double perDA = numberOfBasePairs * 660/0.34;
+		G4int numberOfBasePairs = G4int(totalSpecies/2);
+		G4double perDA = numberOfBasePairs * 660;
 		G4double per100eV_to_umolPerJoule = 0.1036;
 
 		G4cout << " -- total SSB: " << totalSSB << G4endl;
@@ -222,8 +222,8 @@ void TsScoreDNADamageWithIRT::UserHookForEndOfEvent() {
 		G4cout << "=========== Total indirect SSB      : " << totalIndirectSSB << G4endl;
 		G4cout << "=========== Total dose in envelope  : " << totalDose/gray<< " Gy " <<G4endl;
 		G4cout << "=========== Total edep in envelope  : " << fEnergyDepositPerEvent/MeV << " MeV " << G4endl;
-		G4cout << "=========== SSB in plasmid       /Gy: " <<  totalSSB/totalDose /gray       << " /Gy" << G4endl;
-		G4cout << "=========== SSB in plasmid    /Gy/Da: " <<  totalSSB/totalDose/gray/perDA << " /Gy/Da" << G4endl;
+		G4cout << "=========== SSB in plasmid       /Gy: " <<  totalSSB/(totalDose/gray)       << " /Gy" << G4endl;
+		G4cout << "=========== SSB in plasmid    /Gy/Da: " <<  totalSSB/(totalDose/gray)/perDA << " /Gy/Da" << G4endl;
 		G4cout << "=========== SSB in plasmid    /100eV: " << 100*totalSSB/(fEnergyDepositPerEvent/eV) << " /100 eV" << G4endl;
 		G4cout << "=========== SSB in plasmid    umol/J: " << per100eV_to_umolPerJoule*100*totalSSB/(fEnergyDepositPerEvent/eV) << " umol/J" << G4endl;
 		G4cout << "=========== Total events to reach a dose of " << fPrescribedDose/gray << " (Gy) = " << GetEventID() << G4endl;

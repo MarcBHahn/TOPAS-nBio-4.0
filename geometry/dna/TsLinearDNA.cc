@@ -12,7 +12,6 @@
 // A strand of DNA.
 
 #include "TsLinearDNA.hh"
-
 #include "TsParameterManager.hh"
 
 #include "G4VPhysicalVolume.hh"

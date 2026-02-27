@@ -54,7 +54,6 @@ protected:
 	std::map<G4int, G4String> fMoleculesName;
 	std::vector<G4double> fPulseTime;
 
-	TsIRTConfiguration* fReactionConf;
 	TsParameterManager* fPm;
 	G4String fName;
 
@@ -72,4 +71,3 @@ protected:
 
 };
 #endif
-

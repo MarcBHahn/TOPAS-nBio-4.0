@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.G4DATA_DIR }}
-          key: g4data-G4EMLOW-8.2-G4ENSDFSTATE-2.3
+          key: g4data-G4EMLOW-8.6.1-G4ENSDFSTATE-3.0
 
       - name: Download Geant4 EMLOW & ENSDFSTATE datasets
         if: steps.cache-g4data.outputs.cache-hit != 'true'
@@ -47,19 +47,19 @@ jobs:
           set -euo pipefail
           mkdir -p "$G4DATA_DIR"
           cd "$G4DATA_DIR"
-          curl -sSLO https://cern.ch/geant4-data/datasets/G4EMLOW.8.2.tar.gz
-          tar -xzf G4EMLOW.8.2.tar.gz
-          rm G4EMLOW.8.2.tar.gz
-          curl -sSLO https://cern.ch/geant4-data/datasets/G4ENSDFSTATE.2.3.tar.gz
-          tar -xzf G4ENSDFSTATE.2.3.tar.gz
-          rm G4ENSDFSTATE.2.3.tar.gz
+          curl -sSLO https://cern.ch/geant4-data/datasets/G4EMLOW.8.6.1.tar.gz
+          tar -xzf G4EMLOW.8.6.1.tar.gz
+          rm G4EMLOW.8.6.1.tar.gz
+          curl -sSLO https://cern.ch/geant4-data/datasets/G4ENSDFSTATE.3.0.tar.gz
+          tar -xzf G4ENSDFSTATE.3.0.tar.gz
+          rm G4ENSDFSTATE.3.0.tar.gz
 
       - name: Pull OpenTOPAS Docker image
         run: docker pull $TOPAS_DOCKER_IMAGE
 
       - name: Download TOPAS docker launcher
         run: |
-          curl -sSfL https://raw.githubusercontent.com/OpenTOPAS/OpenTOPAS/fix-bugs/docker/topas-docker -o docker-run
+          curl -sSfL https://raw.githubusercontent.com/OpenTOPAS/OpenTOPAS/main/docker/topas-docker -o docker-run
           chmod +x docker-run
 
       - name: Install nrtest tooling

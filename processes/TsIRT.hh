@@ -49,7 +49,6 @@ protected:
 	std::unordered_map<G4int,std::unordered_map<G4int,std::unordered_map<G4int,std::unordered_map<G4int,G4bool>>>> fSpaceBinned;
 	std::map<G4int, G4String> fMoleculesName;
 
-	TsIRTConfiguration* fReactionConf;
 	TsParameterManager* fPm;
 	G4String fName;
 
@@ -59,4 +58,3 @@ protected:
 	
 };
 #endif
-
