@@ -369,15 +369,13 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		
 		if (fPm->ParameterExists("Ch/"+chemistryList+"/NaCl")){
 			fSaltNaCl = fPm->GetDoubleParameter("Ch/"+chemistryList+"/NaCl","molar concentration");
-			fMonovalentSalt = fMonovalentSalt + fSaltNaCl;
 		}
 		else{fSaltNaCl=0.0;}
 		
 		if (fPm->ParameterExists("Ch/"+chemistryList+"/KCl")){
 			fSaltKCl = fPm->GetDoubleParameter("Ch/"+chemistryList+"/KCl","molar concentration");
-			fMonovalentSalt = fMonovalentSalt + fSaltKCl;
 		}
-		else{fSaltNaCl=0.0;}
+		else{fSaltKCl=0.0;}
 		
 		if (fPm->ParameterExists("Ch/"+chemistryList+"/DivalentSalt")){
 			fDivalentSalt = fPm->GetDoubleParameter("Ch/"+chemistryList+"/DivalentSalt","molar concentration");
@@ -386,7 +384,6 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		
 		if (fPm->ParameterExists("Ch/"+chemistryList+"/MgCl2")){
 			fSaltMgCl2 = fPm->GetDoubleParameter("Ch/"+chemistryList+"/MgCl2","molar concentration");
-			fDivalentSalt = fDivalentSalt + fSaltMgCl2;
 		}
 		else{fSaltMgCl2=0.0;}
 
@@ -1399,7 +1396,7 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
 	G4double HPO4Con = 0.0;
 	G4double H2PO4Con = 0.0;
 	G4double H3PO4Con = 0.0;
-	G4double ChlorideIon = fSaltNaCl + fSaltKCl + 2.0*fSaltMgCl2;
+	G4double ChlorideIon = 0.0; 
 
     if (pHOrConcentration == "PH" && fpHSolvent == "h2so4") {
         AcidComponents = GetH2SO4ComponentsConcentrationPH(fpHValue);
@@ -1446,8 +1443,6 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
 			G4cout << "-- Add additional 137 mM NaCl and 2.7mM KCl monovalent salts for phosphate buffered saline (PBS)." << G4endl;
 			fSaltNaCl = fSaltNaCl + 137e-3;
 			fSaltKCl  = fSaltKCl  + 2.7e-3;
-			fMonovalentSalt = fMonovalentSalt + fSaltNaCl + fSaltKCl;
-			ChlorideIon = ChlorideIon + fSaltNaCl + fSaltKCl;
 		}
     }
 
@@ -1457,6 +1452,9 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
     G4cout << G4endl;
 
     G4cout << " ###--- Add Salt effects to Ionic strength ---###" << G4endl;
+	fMonovalentSalt = fMonovalentSalt + fSaltNaCl + fSaltKCl;
+	fDivalentSalt   = fDivalentSalt + fSaltMgCl2;
+	ChlorideIon     = fSaltNaCl + fSaltKCl + 2.0*fSaltMgCl2;
 	G4double additionalIonicFromSalts = GetIonicStrengthFromSalts(fMonovalentSalt,fDivalentSalt,fTrivalentSalt);
 	G4cout << " ###--- Add additional ionic strength from salts: " << additionalIonicFromSalts <<G4endl;
 	Ionic = Ionic + additionalIonicFromSalts;
