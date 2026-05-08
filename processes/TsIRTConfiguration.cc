@@ -24,13 +24,13 @@ TsIRTConfiguration::TsIRTConfiguration(G4String name, TsParameterManager* pM)
 fKick(false), fAllTotallyDiffusionControlled(false)
 {
 	G4String chemistryList = fPm->GetStringParameter("Ch/ChemistryName");
-	
+
 	fUtils = new TsIRTUtils();
 	fLowerTime = 1.0e-13*s;
 	fUpperTime = 1.0e-6*s;
-	
+
 	fExistingMolecules.clear();
-	
+
 	fExistingMolecules["hydrogen"]         = "H^0";
 	fExistingMolecules["hydroxyl"]         = "OH^0";
 	fExistingMolecules["hydrogenperoxide"] = "H2O2^0";
@@ -57,7 +57,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 	fGeant4NameOverrides["O_3^-1"] = "O3^-1";
 	fGeant4NameOverrides["\u00b0O^0"] = "O^0";
 	fGeant4NameOverrides["O\u00b0^-1"] = "O^-1";
-	
+
 	AddMolecule("H^0",     7.0e9*nm*nm/s,   0, 0.19*nm);
 	AddMolecule("OH^0",    2.2e9*nm*nm/s,   0, 0.22*nm);
 	AddMolecule("H2O2^0",  2.3e9*nm*nm/s,   0, 0.21*nm);
@@ -74,20 +74,20 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 	AddMolecule("O3^-1",   2.0e9*nm*nm/s, -1, 0.20*nm);
 	AddMolecule("O3^0",    2.0e9*nm*nm/s,  0, 0.20*nm);
 	AddMolecule("None",    0.0e9*nm*nm/s,  0, 0.00*nm);
-	
+
 	RegisterGeant4Aliases();
-	
+
 	// Re-set diffusion coefficient, radius and/or charge.
 	std::vector<G4String>* moleculeNames = new std::vector<G4String>;
 	fPm->GetParameterNamesStartingWith("Mo/", moleculeNames);
 	G4int numberOfMolecules = moleculeNames->size();
 	std::vector<G4String> moleculesDontExist;
-	
+
 	for ( int i = 0; i < numberOfMolecules; i++ ) {
 		G4String fullName = (*moleculeNames)[i];
 		G4StrUtil::to_lower(fullName);
 		G4bool moleculeExists = false;
-		
+
 		if ( G4StrUtil::contains(fullName,"diffusioncoefficient") ) {
 			G4String molName = fullName.substr(3, fullName.find("diffusioncoefficient")-4);
 			if ( fExistingMolecules.find(molName) != fExistingMolecules.end() ) {
@@ -98,7 +98,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 				moleculeExists = true;
 			}
 		}
-		
+
 		if (G4StrUtil::contains(fullName,"radius") ) {
 			G4String molName = fullName.substr(3, fullName.find("radius")-4);
 			if ( fExistingMolecules.find(molName) != fExistingMolecules.end() ) {
@@ -109,7 +109,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 				moleculeExists = true;
 			}
 		}
-		
+
 		if (G4StrUtil::contains(fullName,"charge")) {
 			G4String molName = fullName.substr(3, fullName.find("charge")-4);
 			if ( fExistingMolecules.find(molName) != fExistingMolecules.end() ) {
@@ -120,12 +120,12 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 				moleculeExists = true;
 			}
 		}
-		
+
 		if (G4StrUtil::contains(fullName,"symbol") && !moleculeExists) {
 			moleculesDontExist.push_back(fullName.substr(3, fullName.find("symbol")-4));
 		}
 	}
-	
+
 	// Creates user-defined molecules.
 	for ( size_t u = 0; u < moleculesDontExist.size(); u++ ) {
 		G4StrUtil::to_lower(moleculesDontExist[u]);
@@ -134,7 +134,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		G4double diffusionCoefficient = fPm->GetDoubleParameter("Mo/" + moleculesDontExist[u] +
 																"/DiffusionCoefficient","surface perTime");
 		G4String symbol = fPm->GetStringParameter("Mo/" + moleculesDontExist[u] + "/Symbol");
-		
+
 		if ( fPm->ParameterExists("Mo/" + moleculesDontExist[u] + "/AssignMoleculeID"))
 			AddMolecule(symbol,
 						diffusionCoefficient, charge, radius,
@@ -145,26 +145,26 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		fExistingMolecules[moleculesDontExist[u]] = symbol;
 
     }
-	
+
 	G4String parName = "Ch/" + chemistryList + "/SetAllReactionsTotallyDiffusionControlled";
 	if ( fPm->ParameterExists(parName) )
 		fAllTotallyDiffusionControlled = fPm->GetBooleanParameter(parName);
-	
+
 	// Declare And Insert Binary Reactions
 	std::vector<G4String>* reactionNames = new std::vector<G4String>;
 	fPm->GetParameterNamesBracketedBy("Ch/" , "Products", reactionNames);
 	G4int numberOfReactions = reactionNames->size();
 	G4int prefixLength = G4String("Ch/" + chemistryList + "/Reaction/").length();
-	
+
 	for ( int i = 0; i < numberOfReactions; i++ ) {
 		G4String aparName = (*reactionNames)[i];
 		if ( G4StrUtil::contains(aparName,"BackgroundReaction") || G4StrUtil::contains(aparName,"/DissociationReaction/"))
 			continue;
-		
+
 		if ( fPm->ParameterExists(aparName.substr(0,aparName.find("Products")-1) + "/Active") &&
 			!fPm->GetBooleanParameter(aparName.substr(0,aparName.find("Products")-1) + "/Active") )
 			continue;
-		
+
 		G4String reactions = aparName.substr(prefixLength, aparName.find("Products")-prefixLength-1);
 		G4String reactorA = reactions.substr(0, reactions.find("/"));
 		G4String reactorB = reactions.substr(reactions.find("/") + 1);
@@ -173,7 +173,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		G4String* product = fPm->GetStringVector(aparName);
 		G4int nbOfProduct = fPm->GetVectorLength(aparName);
 		std::vector<G4int> vProduct;
-		
+
 		for ( int j = 0; j < nbOfProduct; j++ ) {
 			G4StrUtil::to_lower(product[j]);
 			vProduct.push_back(fMoleculesID[fExistingMolecules[product[j]]]);
@@ -181,7 +181,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 
 		G4StrUtil::to_lower(reactorA);
 		G4StrUtil::to_lower(reactorB);
-		
+
 		G4int reactionType = fPm->GetIntegerParameter(aparName.substr(0,aparName.find("Products")-1) + "/ReactionType");
 
 		G4double reactionRate = fPm->GetDoubleParameter(aparName.substr(0,aparName.find("Products")-1) +
@@ -199,7 +199,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 															"/DiffusionRate","perMolarConcentration perTime");
 				fReactions[fReactionID-1].kdif = diffusionRate;
 				fReactions[fReactionID-1].kact = activationRate;
-				G4cout << "Advance Reaction Mode for reaction" << fReactionID-1 << " : " 
+				G4cout << "Advance Reaction Mode for reaction" << fReactionID-1 << " : "
 				       << fExistingMolecules[reactorA] << " + " << fExistingMolecules[reactorB] << G4endl;
 			}
 			else {
@@ -221,7 +221,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 			fReactions[fReactionID-1].isMultiChannel = true;
 			G4int nbOfChanelWeight  = fPm->GetVectorLength(aparName.substr(0,aparName.find("Products")-1) + "/ChannelWeights");
 			G4double* ChanelWeights = fPm->GetUnitlessVector(aparName.substr(0,aparName.find("Products")-1) + "/ChannelWeights");
-			
+
 			if (nbOfChanelWeight != channels) {
 				Quit(aparName.substr(0,aparName.find("Products")-1) + "/ChannelWeights", "Number of Elements doesn't match with the number of channels");
 			}
@@ -233,7 +233,7 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 				G4String chanelIndx = G4UIcommand::ConvertToString(j);
 				G4String* productInChannel = fPm->GetStringVector(aparName.substr(0,aparName.find("Products")-1) + "/ProductsInChannel" + chanelIndx);
 				G4int nbProductsInChannel  = fPm->GetVectorLength(aparName.substr(0,aparName.find("Products")-1) + "/ProductsInChannel" + chanelIndx);
-				
+
 				std::vector<G4int> productsOfChannel;
 				for (G4int k = 0; k < nbProductsInChannel; k++) {
 					G4StrUtil::to_lower(productInChannel[k]);
@@ -243,22 +243,22 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 
 				fReactions[fReactionID-1].productsChannel.push_back(productsOfChannel);
 				fReactions[fReactionID-1].weightsChannels.push_back(ChanelWeights[j]);
-				
+
 			}
 		}
 	}
-	
+
 	// Declare And Insert Background Reactions
 	prefixLength = G4String("Ch/" + chemistryList + "/BackgroundReaction/").length();
 	for ( int i = 0; i < numberOfReactions; i++ ) {
 		G4String aparName = (*reactionNames)[i];
 		if ( G4StrUtil::contains(aparName,"/Reaction/") || G4StrUtil::contains(aparName,"/DissociationReaction/"))
 			continue;
-		
+
 		if ( fPm->ParameterExists(aparName.substr(0,aparName.find("Products")-1) + "/Active") &&
 			!fPm->GetBooleanParameter(aparName.substr(0,aparName.find("Products")-1) + "/Active") )
 			continue;
-		
+
 		G4String reactions = aparName.substr(prefixLength, aparName.find("Products")-prefixLength-1);
 		G4String reactorA = reactions.substr(0, reactions.find("/"));
 		G4String reactorB = reactions.substr(reactions.find("/") + 1);
@@ -267,15 +267,15 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		G4String* product = fPm->GetStringVector(aparName);
 		G4int nbOfProduct = fPm->GetVectorLength(aparName);
 		std::vector<G4int> vProduct;
-		
+
 		for ( int j = 0; j < nbOfProduct; j++ ) {
 			G4StrUtil::to_lower(product[j]);
 			vProduct.push_back(fMoleculesID[fExistingMolecules[product[j]]]);
 		}
-		
+
 		G4StrUtil::to_lower(reactorA);
 		G4StrUtil::to_lower(reactorB);
-		
+
 		if ( fPm->ParameterExists(aparName.substr(0,aparName.find("Products")-1) + "/ScavengingCapacity") ) {
 			G4double scavengingCapacity = fPm->GetDoubleParameter(aparName.substr(0,aparName.find("Products")-1) +
 																  "/ScavengingCapacity","perTime");
@@ -286,11 +286,11 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 															 "/Concentration","molar concentration");
 			G4double reactionRate = fPm->GetDoubleParameter(aparName.substr(0,aparName.find("Products")-1) +
 															"/ReactionRate","perMolarConcentration perTime");
-			
+
 			G4String scavengingExponentialModel = "exponentialsinglefactor";
 			if ( fPm->ParameterExists(aparName.substr(0,aparName.find("Products")-1) + "/ScavengingModel"))
 				scavengingExponentialModel = fPm->GetStringParameter(aparName.substr(0,aparName.find("Products")-1) + "/ScavengingModel");
-			
+
 			G4StrUtil::to_lower(scavengingExponentialModel);
 			if ( scavengingExponentialModel == "exponentialsinglefactor" ) {
 				InsertBackgroundReaction(reactorA, reactorB,vProduct,reactionRate,concentration,false);
@@ -309,11 +309,11 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		G4String aparName = (*reactionNames)[i];
 		if ( G4StrUtil::contains(aparName,"/Reaction/") || G4StrUtil::contains(aparName,"/BackgroundReaction/"))
 			continue;
-		
+
 		if ( fPm->ParameterExists(aparName.substr(0,aparName.find("Products")-1) + "/Active") &&
 			!fPm->GetBooleanParameter(aparName.substr(0,aparName.find("Products")-1) + "/Active") )
 			continue;
-		
+
 		G4String reactions = aparName.substr(prefixLength, aparName.find("Products")-prefixLength-1);
 		G4String reactorA = reactions.substr(0, reactions.find("/"));
 		G4String reactorB = "none";
@@ -321,63 +321,81 @@ fKick(false), fAllTotallyDiffusionControlled(false)
 		G4String* product = fPm->GetStringVector(aparName);
 		G4int nbOfProduct = fPm->GetVectorLength(aparName);
 		std::vector<G4int> vProduct;
-		
+
 		for ( int j = 0; j < nbOfProduct; j++ ) {
 			G4StrUtil::to_lower(product[j]);
 			vProduct.push_back(fMoleculesID[fExistingMolecules[product[j]]]);
 		}
-		
+
 		G4StrUtil::to_lower(reactorA);
-		
+
 		G4double concentration = 0;
 		G4double reactionRate = fPm->GetDoubleParameter(aparName.substr(0,aparName.find("Products")-1) +"/DissociationRate","perTime");
-		
+
 		InsertBackgroundReaction(reactorA, reactorB,vProduct,reactionRate,concentration,false);
 	}
-	
+
     ResolveReactionParameters();
     PrintReactionsInformation();
-    
+
 	// Re-scale chemistry parameters based on temperature
 	parName = "Ch/" + chemistryList + "/Temperature";
 	fScaleForTemperature = false;
 	if ( fPm->ParameterExists(parName) ) {
 		fTemperature = fPm->GetUnitlessParameter(parName);
 		fScaleForTemperature = true;
-		
+
 		parName = "Ch/" + chemistryList + "/ApplyCorrectionScalingForTemperature";
 		fKick = false;
 		if ( fPm->ParameterExists(parName) )
 			fKick = fPm->GetBooleanParameter(parName);
-		
+
 		AdjustReactionAndDiffusionRateForTemperature();
         G4cout << "======================================== performed Temperature Scaling ===========================================" << G4endl;
         ResolveReactionParameters();
         PrintReactionsInformation();
 	}
-    
-    
-    
+
+
+
     if ( fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesFromSubstance") ) {
         fpHSolventConcentration = 0.0;
         fpHValue                = 7.1;
-		
+
 		if (fPm->ParameterExists("Ch/"+chemistryList+"/MonovalentSalt")){
 			fMonovalentSalt = fPm->GetDoubleParameter("Ch/"+chemistryList+"/MonovalentSalt","molar concentration");
 		}
 		else{fMonovalentSalt=0.0;}
-
+		
+		if (fPm->ParameterExists("Ch/"+chemistryList+"/NaCl")){
+			fSaltNaCl = fPm->GetDoubleParameter("Ch/"+chemistryList+"/NaCl","molar concentration");
+			fMonovalentSalt = fMonovalentSalt + fSaltNaCl;
+		}
+		else{fSaltNaCl=0.0;}
+		
+		if (fPm->ParameterExists("Ch/"+chemistryList+"/KCl")){
+			fSaltKCl = fPm->GetDoubleParameter("Ch/"+chemistryList+"/KCl","molar concentration");
+			fMonovalentSalt = fMonovalentSalt + fSaltKCl;
+		}
+		else{fSaltNaCl=0.0;}
+		
 		if (fPm->ParameterExists("Ch/"+chemistryList+"/DivalentSalt")){
 			fDivalentSalt = fPm->GetDoubleParameter("Ch/"+chemistryList+"/DivalentSalt","molar concentration");
 		}
 		else{fDivalentSalt=0.0;}
 		
+		if (fPm->ParameterExists("Ch/"+chemistryList+"/MgCl2")){
+			fSaltMgCl2 = fPm->GetDoubleParameter("Ch/"+chemistryList+"/MgCl2","molar concentration");
+			fDivalentSalt = fDivalentSalt + fSaltMgCl2;
+		}
+		else{fSaltMgCl2=0.0;}
+
 		if (fPm->ParameterExists("Ch/"+chemistryList+"/TrivalentSalt")){
 			fTrivalentSalt = fPm->GetDoubleParameter("Ch/"+chemistryList+"/TrivalentSalt","molar concentration");
 		}
 		else{fTrivalentSalt=0.0;}
-		
-        
+
+
         fpHSolvent = fPm->GetStringParameter("Ch/"+chemistryList+"/ModelAcidPropertiesFromSubstance");
         G4StrUtil::to_lower(fpHSolvent);
         if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration") &&
@@ -385,18 +403,18 @@ fKick(false), fAllTotallyDiffusionControlled(false)
             G4String message = "Cannot be defined when parameter: Ch/" + chemistryList + "/ModelAcidPropertiesWithConcentration is used.";
             Quit("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH",message);
         }
-        
+
         if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration") ) {
             fpHSolventConcentration = fPm->GetDoubleParameter("Ch/"+chemistryList+"/ModelAcidPropertiesWithConcentration","molar concentration");
             AdjustReactionRateForPH("Concentration");
         }
-        
+
         if (fPm->ParameterExists("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH") ) {
             fpHValue = fPm->GetUnitlessParameter("Ch/"+chemistryList+"/ModelAcidPropertiesWithpH");
             AdjustReactionRateForPH("PH");
         }
-        
-        
+
+
         G4cout << "======================================== performed ph Scaling ===========================================" << G4endl;
         ResolveReactionParameters();
         PrintReactionsInformation();
@@ -417,7 +435,7 @@ void TsIRTConfiguration::AddMolecule(G4String name, G4double diffusionCoefficien
 	aMolecule.diffusionCoefficient = diffusionCoefficient;
 	aMolecule.charge = charge;
 	aMolecule.radius = radius;
-	
+
 	if(moleculeID != 0){
 		fMoleculesDefinition[moleculeID] = aMolecule;
 		fMoleculesID[name] = moleculeID;
@@ -437,7 +455,7 @@ void TsIRTConfiguration::AddMolecule(G4String name, G4double diffusionCoefficien
 			break;
 		}
 	}
-	
+
 	if ( !found ) fExistingMolecules[name] = name;
 }
 
@@ -498,9 +516,9 @@ void TsIRTConfiguration::QuitIfMoleculeNotFound(G4String mol) {
 void TsIRTConfiguration::Diffuse(TsMolecule& mol, G4double dt) {
 	G4double sigma, x, y, z;
 	G4double diffusionCoefficient = fMoleculesDefinition[mol.id].diffusionCoefficient;
-	
+
 	sigma = std::sqrt(2.0 * diffusionCoefficient * dt);
-	
+
 	x = G4RandGauss::shoot(0., 1.0)*sigma;
 	y = G4RandGauss::shoot(0., 1.0)*sigma;
 	z = G4RandGauss::shoot(0., 1.0)*sigma;
@@ -516,7 +534,7 @@ void TsIRTConfiguration::ResolveReactionParameters() {
 		G4int reactionType = fReactions[i].reactionType;
 		G4double kobs = fReactions[i].kobs;
 		G4double rc = GetOnsagerRadius(molA, molB);
-        
+
 		G4double sumDiffCoeff = fMoleculesDefinition[molA].diffusionCoefficient + fMoleculesDefinition[molB].diffusionCoefficient;
 		fReactions[i].diffusionCoefficient = sumDiffCoeff;
 //		if(molA == molB) sumDiffCoeff/=2;
@@ -534,12 +552,12 @@ void TsIRTConfiguration::ResolveReactionParameters() {
 		if (reactionType == 1 || reactionType == 3 || reactionType == 5) {
             effectiveReactionRadius = kobs / (4. * CLHEP::pi * sumDiffCoeff * CLHEP::Avogadro);
             reactionRadius = effectiveReactionRadius;
-            
+
             if(rc != 0){
             	if(-rc > effectiveReactionRadius) reactionRadius = 0;
             	else reactionRadius = rc/log(1+rc/effectiveReactionRadius);
             }
-            
+
 			kdiff = kobs;
 			if ( reactionType == 5 ) probability = 0.25;
 
@@ -547,7 +565,7 @@ void TsIRTConfiguration::ResolveReactionParameters() {
             reactionRadius = fMoleculesDefinition[molA].radius + fMoleculesDefinition[molB].radius;
             effectiveReactionRadius = reactionRadius;
             if(rc != 0) effectiveReactionRadius = -rc / (1-exp(rc / reactionRadius));
-            
+
 			G4double Rs = 0.29 * nm; // distance between water molecules (0.29-0.31 nm adjustable)
 
 			kdiff = 4 * pi * sumDiffCoeff * effectiveReactionRadius * Avogadro;
@@ -562,7 +580,7 @@ void TsIRTConfiguration::ResolveReactionParameters() {
                 G4cout << "This causes (kdif-kobs) negative or zero. When defining kact, it set the reaction probability to unrealistic values. Adjust rate or type." << G4endl;
                 fPm->AbortSession(1);
             }
-        
+
             G4double ratio = kobs / kdiff;
             if (ratio > 0.5) {
                 G4cout << "IRT: type " << reactionType << " "
@@ -577,7 +595,7 @@ void TsIRTConfiguration::ResolveReactionParameters() {
                 fPm->AbortSession(1);
             }
             */
-            
+
 			kact = kdiff * kobs / (kdiff - kobs);
 
             G4double sigmaEffRs = reactionRadius + Rs;
@@ -603,7 +621,7 @@ void TsIRTConfiguration::InsertReaction(G4String molA, G4String molB, std::vecto
 {
 	QuitIfMoleculeNotFound(molA);
 	QuitIfMoleculeNotFound(molB);
-	
+
 	G4int index = fReactionID;
 	fReactionID++;
 	fTotalBinaryReaction++;
@@ -619,7 +637,7 @@ void TsIRTConfiguration::InsertReaction(G4String molA, G4String molB, std::vecto
 	aMolecularReaction.index = index;
 	aMolecularReaction.kact  = -1;
 	aMolecularReaction.kdif  = -1;
-	
+
 	if (fAllTotallyDiffusionControlled) {
 		if ( reactionType == 2 ) reactionType = 1;
 		else if ( reactionType == 4 ) reactionType = 3;
@@ -628,7 +646,7 @@ void TsIRTConfiguration::InsertReaction(G4String molA, G4String molB, std::vecto
 			else reactionType = 1;
 		}
 	}
-	
+
 	aMolecularReaction.reactionType = reactionType;
 	aMolecularReaction.kobs = kobs;
 	aMolecularReaction.scavengingCapacity = 0.0;
@@ -645,7 +663,7 @@ void TsIRTConfiguration::InsertReaction(G4String molA, G4String molB, std::vecto
 		}
 		if ( !found ) fMoleculeCanReactWith[pdgA].push_back(std::make_pair(pdgB,index));
 	}
-	
+
 	if ( fMoleculeCanReactWith.find(pdgB) == fMoleculeCanReactWith.end() ) { // key not found
 		fMoleculeCanReactWith[pdgB].push_back(std::make_pair(pdgA,index));
 	} else {
@@ -671,13 +689,13 @@ void TsIRTConfiguration::InsertBackgroundReaction(G4String A, G4String B, std::v
 
 	G4String molNameA = fExistingMolecules[A];
 	G4String molNameB = fExistingMolecules[B];
-	
+
 	G4int index = fReactionID;
 	fReactionID++;
 	G4int molA = fMoleculesID[molNameA];
 	G4int molB = fMoleculesID[molNameB];
 	// No test to confirm if this reaction already exists, it could be a first order reaction
-	
+
 	std::vector<G4int> products;
 	for (size_t i = 0; i < p.size(); i++) {
 		G4String molNameP = fMoleculesName[p[i]];
@@ -685,7 +703,7 @@ void TsIRTConfiguration::InsertBackgroundReaction(G4String A, G4String B, std::v
 			products.push_back(fMoleculesID[molNameP]);
 		}
 	}
-	
+
 	TsMolecularReaction aMolecularReaction;
 	aMolecularReaction.reactorA = molA;
 	aMolecularReaction.reactorB = molB;
@@ -730,7 +748,7 @@ std::vector<G4ThreeVector> TsIRTConfiguration::ResampleReactantsPosition(TsMolec
 	// Position approach
 	G4double D1 = fMoleculesDefinition[molA.id].diffusionCoefficient;
 	G4double D2 = fMoleculesDefinition[molB.id].diffusionCoefficient;
-	
+
 	G4ThreeVector r1 = molA.position;
 	G4ThreeVector r2 = molB.position;
 	G4double dtA = std::fabs(time-molA.time);
@@ -739,7 +757,7 @@ std::vector<G4ThreeVector> TsIRTConfiguration::ResampleReactantsPosition(TsMolec
     std::vector<G4ThreeVector> result;
     G4int nOfProducts = fReactions[index].products.size();
     G4ThreeVector position;
-    
+
     if ( D1 == 0 ) {
         molB.position = r1;
         molB.time = time;
@@ -753,7 +771,7 @@ std::vector<G4ThreeVector> TsIRTConfiguration::ResampleReactantsPosition(TsMolec
             result.push_back(r1);
             return result;
         }
-        
+
     } else if ( D2 == 0 ) {
         molA.position = r2;
         molA.time = time;
@@ -768,24 +786,24 @@ std::vector<G4ThreeVector> TsIRTConfiguration::ResampleReactantsPosition(TsMolec
             return result;
         }
     }
-    
+
 	if (dt == 0) dt = 1*ps;
-	
+
 	G4ThreeVector S1 = r1-r2;
 	G4double r0 = S1.mag();
 	G4double effectiveReactionRadius = fReactions[index].effectiveReactionRadius;
-	
+
 	if (S1 != G4ThreeVector())
 		S1.setMag(effectiveReactionRadius);
 
 	G4double s12 = 2.0 * D1 * dt;
 	G4double s22 = 2.0 * D2 * dt;
 	G4double alpha = effectiveReactionRadius * r0/(2*(D1+D2)*dt);
-	
+
 	G4ThreeVector S2 = (r1 + (s12/s22)*r2) + G4ThreeVector(G4RandGauss::shoot(0.0, s12 + s22*s22/s12),
 														   G4RandGauss::shoot(0.0, s12 + s22*s22/s12),
 														   G4RandGauss::shoot(0.0, s12 + s22*s22/s12));
-	
+
 	if (S1 != G4ThreeVector()) {
 		S1.setPhi(rad*G4UniformRand()*2.0*CLHEP::pi);
 		S1.setTheta(rad*std::acos(1.0 + 1./alpha * std::log(1.0 - G4UniformRand()*(1.-std::exp(-2.0*alpha)))));
@@ -798,7 +816,7 @@ std::vector<G4ThreeVector> TsIRTConfiguration::ResampleReactantsPosition(TsMolec
 	molA.time = time;
 	molB.position = R2;
 	molB.time = time;
-	
+
 	result.push_back(R1);
 	result.push_back(R2);
 
@@ -809,7 +827,7 @@ std::vector<G4ThreeVector> TsIRTConfiguration::ResampleReactantsPosition(TsMolec
 
 	result.push_back(position);
 	result.push_back(R1 + 0.5 * (R1 + R2));
-	
+
 	return result;
 
 }
@@ -817,12 +835,12 @@ std::vector<G4ThreeVector> TsIRTConfiguration::ResampleReactantsPosition(TsMolec
 // TODO products are on the sphere surface ?
 std::vector<G4ThreeVector> TsIRTConfiguration::GetBackgroundPositionOfProducts(TsMolecule molA, G4int index) {
 	std::vector<G4ThreeVector> result;
-	
+
 	G4double D1   = fMoleculesDefinition[molA.id].diffusionCoefficient;
 	G4double kobs = fReactions[index].kobs;
     if (kobs < 0 )
         kobs = 1e10 * 1.0e-3*m*m*m/(mole*s); // dummy kobs for now
-        
+
 	G4ThreeVector CurrentPos = molA.position;
 	std::vector<G4int> Products = fReactions[index].products;
 
@@ -879,7 +897,7 @@ G4double TsIRTConfiguration::GetIndependentReactionTime(TsMolecule molA, TsMolec
 	    	return fUtils->SamplePDC(a, b)/D;
 	    }
 	}
-	
+
 	return -1;
 }
 
@@ -891,7 +909,7 @@ G4int  TsIRTConfiguration::ContactFirstOrderAndBackgroundReactions(TsMolecule mo
 			index.push_back(u);
 		}
 	}
-	
+
 	size_t sizeIndex = index.size();
 	if ( 1 < sizeIndex ) {
 		auto rng = std::default_random_engine {};
@@ -905,12 +923,12 @@ G4int  TsIRTConfiguration::ContactFirstOrderAndBackgroundReactions(TsMolecule mo
 		G4double R3 = R*R*R;
 		G4double Cs = fReactions[u].concentration;
 		if (Cs > 50) {continue;}          // No Contact Reactions with water molecules
-		Cs *= CLHEP::Avogadro;  // nm3 to M multiply by 10^-24 Nav = 6.02214076×10^23x10^-24 = 0.602214076. 
+		Cs *= CLHEP::Avogadro;  // nm3 to M multiply by 10^-24 Nav = 6.02214076×10^23x10^-24 = 0.602214076.
 		G4double prob1 = std::exp(-1.33333333*CLHEP::pi*R3*Cs);
 
 		if ( G4UniformRand() < 1. - prob1 ) return (int)u;
 	}
-	
+
 	return -1;
 }
 
@@ -920,9 +938,9 @@ std::pair<G4int, G4double> TsIRTConfiguration::SampleIRTFirstOrderAndBackgroundR
 	// Search for the IRT with the minium value
 	G4double irt = DBL_MAX;
 	G4int index = -1;
-	
+
 	G4double scavengingCapacity, prob, time;
-	
+
 	for ( size_t u = 0; u < fReactions.size(); u++ ) { // TODO-> Review this algorithm: use t or dt???
 		if ( fReactions[u].reactionType == 6 && pdgA == fReactions[u].reactorA) {
 			prob = G4UniformRand();
@@ -946,7 +964,7 @@ std::pair<G4int, G4double> TsIRTConfiguration::SampleIRTFirstOrderAndBackgroundR
 				else
 					time = -(std::log(1.0 - prob)/scavengingCapacity);
 			}
-			
+
 			if ( time < irt && time > 0.0) {
 				irt = time;
 				index = (int)u;
@@ -966,21 +984,21 @@ void TsIRTConfiguration::SetTimeLimits(G4double lower, G4double upper) {
 
 std::pair<G4String, G4String> TsIRTConfiguration::GetReactants(G4int ReactionIndex) {
 	std::pair<G4String, G4String> Reactants;
-	
+
 	Reactants.first  = fMoleculesName[fReactions[ReactionIndex].reactorA];
 	Reactants.second = fMoleculesName[fReactions[ReactionIndex].reactorB];
-	
+
 	return Reactants;
 }
 
 
 std::vector<G4String> TsIRTConfiguration::GetProducts(G4int ReactionIndex) {
 	std::vector<G4String> Products;
-	
+
 	for ( size_t i = 0; i < (fReactions[ReactionIndex].products).size(); i++) {
 		Products.push_back(fMoleculesName[(fReactions[ReactionIndex].products)[i]]);
 	}
-	
+
 	return Products;
 }
 
@@ -1002,22 +1020,22 @@ void TsIRTConfiguration::ScoreGvalue(std::vector<TsMolecule> &initialSpecies,
 									 std::map<G4int, std::map<G4int, G4int>> &theGvalueInVolume,
 									 std::vector<G4double> timeSteps,
 									 G4int iM, G4int jM, G4int indexOfReaction, G4double irt) {
-	
+
 	std::vector<G4int> products = (GetReaction(indexOfReaction)).products;
 	G4int tBin = fUtils->FindBin(irt, timeSteps);
 	if ( tBin < 0 ) return;
-	
+
 	for ( size_t u = 0; u < products.size(); u++ ) {
 		for ( int ti = tBin; ti < (int)timeSteps.size(); ti++ ) {
 			theGvalueInVolume[products[u]][ti]++;
 		}
 	}
-	
+
 	for ( int ti = tBin; ti < (int)timeSteps.size(); ti++ ) {
 		theGvalueInVolume[initialSpecies[iM].id][ti]--;
 		theGvalueInVolume[initialSpecies[jM].id][ti]--;
 	}
-	
+
 	return;
 }
 
@@ -1026,26 +1044,26 @@ std::vector<G4double> TsIRTConfiguration::GetH2SO4ComponentsConcentrationPH(G4do
 	G4double Ka1 = pow(10,3);
 	G4double Ka2 = pow(10,-1.987);
 	G4double _Kw = 1E-14;
-	
+
 	G4double _H_pos = pow(10,-pH);
 	G4double _SO_4    = (_H_pos - (_Kw / _H_pos)) / ((_H_pos / Ka2) + 2);
 	G4double _HSO_4   = _SO_4 * _H_pos / Ka2;
 	G4double _OH_me   = _Kw / _H_pos;
 	G4double _H_2SO_4 = _HSO_4 * _H_pos / Ka1;
 	G4double H_Poly = 0;
-	
+
 	std::vector<G4double> Results = {_H_pos, _HSO_4, _SO_4, _OH_me, _H_2SO_4, H_Poly};
-	
+
 	return Results;
 }
 
 
 std::vector<G4double> TsIRTConfiguration::GetPhosphateBufferComponentsConcentrationPHandIonicStrength(G4double pH) {
-	
+
 	G4double _Kw = 1E-14;
 	G4double _H_pos = pow(10,-pH);
 	G4double _OH_me   = _Kw / _H_pos;
-	
+
 	// only valid around pH 7.4 with 12mM Phosphate buffer component which is fixed for standard PBS
 	// pKa2 H_2PO_4^- <-> HPO_4^2- is 7.2 and the other two pKas are 2.15 and 12.35
 	// keep these fix, but include already for future extensions
@@ -1053,7 +1071,7 @@ std::vector<G4double> TsIRTConfiguration::GetPhosphateBufferComponentsConcentrat
 	G4double _PO_4 = 0.0;
 	G4double pKa1 = 2.1;
 	G4double pKa3 = 12.3;
-	
+
 	// -> approximate by the Henderson Hasselbach equation pH=pKa + log_10(HPO_4^2-/H_2PO_4^-) (https://goldbook.iupac.org/terms/view/H02781)
 	// Reminder: adjust Ionic strength later on for standard PBS salts: 137 mM NaCl and 2.7mM KCl
 	G4double pKa2 = 7.2;
@@ -1061,11 +1079,11 @@ std::vector<G4double> TsIRTConfiguration::GetPhosphateBufferComponentsConcentrat
 	G4double component_ratio = pow(10, pH-pKa2);
 	G4double _H_2PO_4 =  buffer_component_concentration / (1.0 + component_ratio );
 	G4double _HPO_4   = component_ratio * _H_2PO_4;
-	
+
 	G4double IonicStrength = 0.5 * (_H_pos + _H_2PO_4 + ( _HPO_4* 4) + ( _PO_4* 9) + _OH_me);
 	std::vector<G4double> Results = {IonicStrength, _H_pos , _H3PO_4, _H_2PO_4 , _HPO_4, _PO_4, _OH_me};
 	return Results;
-	
+
 }
 
 
@@ -1076,19 +1094,19 @@ std::vector<G4double> TsIRTConfiguration::GetH2SO4ComponentsConcentrationP(G4dou
 	G4double Ka2 = pow(10,-1.987);
 	G4double _C = Concentration;
 	G4double _Kw = 1E-14;
-	
+
 	G4double _p4 = 1;
 	G4double _p3 = Ka1;
 	G4double _p2 = (Ka1 * Ka2) - (_C * Ka1) - _Kw;
 	G4double _p1 = - ((Ka1 * _Kw) + (2 * _C * Ka1 * Ka2));
 	G4double _p0 = - (_Kw * Ka1 * Ka2);
-	
+
 	std::vector<G4double> P = {_p4, _p3, _p2, _p1, _p0};
-	
+
 	std::vector<G4double> Result = fUtils->GetRoots(4, P);
-	
+
 	G4double _H_pos = -10;
-	
+
 	for (size_t i = 0; i < Result.size(); i++) {
 		if ((Result[i] > 0 and Result[i] < 3.0*_C) and i % 2 != 1) {
 			if ( i+1< Result.size() && Result[i + 1] == 0) {
@@ -1096,20 +1114,20 @@ std::vector<G4double> TsIRTConfiguration::GetH2SO4ComponentsConcentrationP(G4dou
 			}
 		}
 	}
-	
+
 	if (_H_pos == -10)
 		return {0, 0, 0, 0, 0, 0};
-	
+
 	G4double _SO_4    = (_H_pos - (_Kw / _H_pos)) / ((_H_pos / Ka2) + 2);
 	G4double _HSO_4   = _SO_4 * _H_pos / Ka2;
 	G4double _OH_me   = _Kw / _H_pos;
 	G4double _H_2SO_4 = _HSO_4 * _H_pos / Ka1;
-	
+
 	G4double H_Poly = (P[0] * pow(_H_pos,4)) + (P[1] * pow(_H_pos,3)) +
 	(P[2] * pow(_H_pos,2)) + (P[3] * _H_pos) + (P[4]);
-	
+
 	std::vector<G4double> Results = {_H_pos, _HSO_4, _SO_4, _OH_me, _H_2SO_4, H_Poly};
-	
+
 	return Results;
 }
 
@@ -1121,7 +1139,9 @@ G4double TsIRTConfiguration::GetIonicStrength(std::vector<G4double> Components) 
 
 
 G4double TsIRTConfiguration::GetIonicStrengthFromSalts(G4double fMonovalentSalt = 0.0, G4double fDivalentSalt = 0.0, G4double fTrivalentSalt = 0.0) {
-	//assuming all counterions with q=+-1
+	// assuming all counterions with q=+-1
+	// if these salt species shall be considered in the reactions as individual species their concentrations have to be added manually. 
+	// except for NaCl, KCl and MgCl2 when specified explicitly
 	G4double counterions = fMonovalentSalt + 2.0 * fDivalentSalt + 3.0 * fTrivalentSalt;
 	G4double I = 0.5 * ( fMonovalentSalt + 4* fDivalentSalt + 9*fTrivalentSalt + counterions);
 	return I;
@@ -1379,7 +1399,8 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
 	G4double HPO4Con = 0.0;
 	G4double H2PO4Con = 0.0;
 	G4double H3PO4Con = 0.0;
-    
+	G4double ChlorideIon = fSaltNaCl + fSaltKCl + 2.0*fSaltMgCl2;
+
     if (pHOrConcentration == "PH" && fpHSolvent == "h2so4") {
         AcidComponents = GetH2SO4ComponentsConcentrationPH(fpHValue);
         Ionic          = GetIonicStrength(AcidComponents);
@@ -1388,7 +1409,7 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
         OHCon          = AcidComponents[3];
         G4cout << "-- Adjust for PH of H2SO4 " << G4endl;
     }
-    
+
     else if (pHOrConcentration == "Concentration" && fpHSolvent == "h2so4") {
         AcidComponents = GetH2SO4ComponentsConcentrationP(fpHSolventConcentration/fPm->GetUnitValue("M"));
         Ionic          = GetIonicStrength(AcidComponents);
@@ -1397,7 +1418,7 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
         OHCon          = AcidComponents[3];
         G4cout << "-- Adjust for Concentration of H2SO4 " << G4endl;
     }
-    
+
     else if (fpHSolvent == "generic") {
         HCon  = pow(10,-fpHValue);
         OHCon = 1E-14 / HCon;
@@ -1416,14 +1437,17 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
 		H2PO4Con = PhosphateComponents[3];
 		HPO4Con = PhosphateComponents[4];
 		PO4Con = PhosphateComponents[5];
-        G4cout << "-- Adjust ionic strength for phosphate buffer at pH "<< fpHValue<< G4endl;
-		
+        G4cout << "-- Adjust ionic strength for phosphate buffer at pH "<< fpHValue<<" to " << Ionic <<G4endl;
+        G4cout << "-- Concentrations are H^+: "<< HCon <<", -^OH:"<<OHCon <<", H3O4:" << H3PO4Con <<", H2PO4^-:" << H2PO4Con<<", HPO4^2-:" << HPO4Con <<", PO4^3-:" << PO4Con <<G4endl;
+
 		if (fpHSolvent == "pbs" ){
 			// Add monovalent salts from 1xPBS
 			// with physiological salts of 137 mM NaCl and 2.7mM KCl
-			G4double PBS_salts_conc = 139.7e-3;
-			Ionic = Ionic + GetIonicStrengthFromSalts(PBS_salts_conc,0.0,0.0);
-			G4cout << "-- Add 139.7mM monovalent salts for phosphate buffered saline (PBS)." << G4endl;
+			G4cout << "-- Add additional 137 mM NaCl and 2.7mM KCl monovalent salts for phosphate buffered saline (PBS)." << G4endl;
+			fSaltNaCl = fSaltNaCl + 137e-3;
+			fSaltKCl  = fSaltKCl  + 2.7e-3;
+			fMonovalentSalt = fMonovalentSalt + fSaltNaCl + fSaltKCl;
+			ChlorideIon = ChlorideIon + fSaltNaCl + fSaltKCl;
 		}
     }
 
@@ -1431,18 +1455,19 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
         G4cout << "-- Is doing nothing " << pHOrConcentration << " " << fpHSolvent << G4endl;
     }
     G4cout << G4endl;
-	
+
     G4cout << " ###--- Add Salt effects to Ionic strength ---###" << G4endl;
 	G4double additionalIonicFromSalts = GetIonicStrengthFromSalts(fMonovalentSalt,fDivalentSalt,fTrivalentSalt);
 	G4cout << " ###--- Add additional ionic strength from salts: " << additionalIonicFromSalts <<G4endl;
 	Ionic = Ionic + additionalIonicFromSalts;
-	
+	G4cout << "-- Resulting in total ionic strength of the buffer as " << Ionic <<G4endl;
+
     G4cout << " ###-------- pH Scaling Starts ---------###" << G4endl;
-    
+
     for(size_t i = 0; i < fReactions.size(); i++) {
         G4int chargeA   = fMoleculesDefinition[fReactions[i].reactorA].charge;
         G4int chargeB   = fMoleculesDefinition[fReactions[i].reactorB].charge;
-        
+
         if ( chargeA == 0 && chargeB == 0 ) // No scaling in neutral  molecules
             continue;
         /*
@@ -1456,14 +1481,14 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
         G4String ReactB = fMoleculesName[fReactions[i].reactorB];
         std::vector<G4String> products;
         G4double k_Before = 0;
-        
+
         for (size_t vsize = 0; vsize < fReactions[i].products.size(); vsize++){
             products.push_back(fMoleculesName[fReactions[i].products[vsize]]);
         }
-        
+
         fReactions[i].kobs /= fPm->GetUnitValue("/M/s");
         fReactions[i].scavengingCapacity /= 1/s;
-        
+
         /*
         if ( fReactions[i].reactionType != 6 ) {
             k_Before = fReactions[i].kobs;
@@ -1491,17 +1516,17 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
          k_Before = fReactions[i].kobs;
          fReactions[i].kobs = IonicRate(Ionic, fReactions[i]);
          }
-         
+
          else if (fReactions[i].reactionType == 6 && ReactB == "H3O^1") {
          k_Before = fReactions[i].scavengingCapacity;
          fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i])/ 1e-7 * HCon;
          }
-         
+
          else if (fReactions[i].reactionType == 6 && ReactB == "OH^-1") {
          k_Before = fReactions[i].scavengingCapacity;
          fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i])/ 1e-7 * OHCon;
          }
-         
+
          else {
          G4cout << "========= "<< fReactions[i].reactionType << G4endl;
          k_Before = fReactions[i].kobs;
@@ -1509,17 +1534,17 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
          fReactions[i].scavengingCapacity = IonicRate(Ionic, fReactions[i]);
          }
          }
-         
+
          else if ((fReactions[i].reactionType == 6) && (ReactB == "H3O^1")) {
          k_Before = fReactions[i].scavengingCapacity;
          fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * HCon / HCon25;
          }
-         
+
          else if ((fReactions[i].reactionType == 6) && (ReactB == "OH^-1")) {
          k_Before = fReactions[i].scavengingCapacity;
          fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * OHCon / OHCon25;
          }
-         
+
          else if ((fReactions[i].reactionType == 6) && (ReactB == "HSO4^-1")) {
          k_Before = fReactions[i].scavengingCapacity;
          fReactions[i].scavengingCapacity = fReactions[i].scavengingCapacity * HSO4Con;
@@ -1554,18 +1579,31 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
             } else if (ReactB == "HSO4^-1") {
                 setScavenging(fReactions[i].scavengingCapacity * HSO4Con);
 			} else if (ReactB == "H3PO4^0") {
-                setScavenging(fReactions[i].scavengingCapacity * H2PO4Con);
-            } 
-            // Add dihydrogen phosphate Ion to the reactions with e_aq-  + H2P04- 1.9 X 10^7/Ms (Buxton 343 at pH5-7)
+                setScavenging(fReactions[i].scavengingCapacity * H3PO4Con);
+            }
+            // Add dihydrogen phosphate Ion to the reactions with at least e_aq-  + H2P04- 1.9 X 10^7/Ms (Buxton 343 at pH5-7)
             else if (ReactB == "H2PO4^-1") {
                 setScavenging(fReactions[i].scavengingCapacity * H2PO4Con);
             } else if (ReactB == "HPO4^-2") {
                 setScavenging(fReactions[i].scavengingCapacity * HPO4Con);
-            }else if (ReactB == "PO4^-3") {
+            } else if (ReactB == "PO4^-3") {
                 setScavenging(fReactions[i].scavengingCapacity * PO4Con);
             }
+            // salt related scaling
+             else if (ReactB == "Cl^-1") {
+                setScavenging(fReactions[i].scavengingCapacity * ChlorideIon);
+            }
+            else if (ReactB == "Na^1") {
+                setScavenging(fReactions[i].scavengingCapacity * fSaltNaCl);
+            }
+            else if (ReactB == "K^1") {
+                setScavenging(fReactions[i].scavengingCapacity * fSaltKCl);
+            }
+            else if (ReactB == "Mg^2") {
+                setScavenging(fReactions[i].scavengingCapacity * fSaltMgCl2);
+            }
         }
-        
+
         if (k_Before > 0) {
             G4cout << " Reaction Type: " << fReactions[i].reactionType << " | Reaction: " << ReactA << " + " << ReactB;
             for (int prod = 0; prod < (int)products.size(); prod++) {
@@ -1595,11 +1633,11 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
                 //fPm->AbortSession(1);
             }
         }
-        
+
         fReactions[i].kobs *= fPm->GetUnitValue("/M/s");
         fReactions[i].scavengingCapacity *= 1/s;
     }
-    
+
     G4cout << " ###-------- pH Scaling Ends ---------###" << G4endl;
     G4cout << G4endl;
 }
@@ -1673,7 +1711,7 @@ G4double TsIRTConfiguration::GetOnsagerRadius(G4int molA, G4int molB) {
 void TsIRTConfiguration::PrintMoleculesInformation() {
     if (!G4Threading::IsMasterThread())
         return;
-    
+
 	for ( auto& molecules : fMoleculesID ) {
 		G4String name = molecules.first;
 		G4int id = molecules.second;
@@ -1695,7 +1733,7 @@ void TsIRTConfiguration::PrintReactionsInformation() {
 
     if (!G4Threading::IsMasterThread())
         return;
-    
+
 	G4IosFlagsSaver iosfs(G4cout);
 	std::map<size_t, std::vector<TsMolecularReaction> > temporal;
 	for ( size_t i = 0; i < fReactions.size(); i++) {
@@ -1717,11 +1755,11 @@ void TsIRTConfiguration::PrintReactionsInformation() {
 
 	G4cout << G4endl;
 	G4int n = 0;
-	
+
     for (const auto& kv : temporal) { //for ( size_t i = 1; i <= temporal.size(); i++ ) {
         size_t i = kv.first;
         const auto& reactionsInType = kv.second;
-        
+
         for ( auto& reactions : reactionsInType) { //temporal[i] ) {
 			G4int type = reactions.reactionType;
 			G4int molA = reactions.reactorA;

@@ -26,7 +26,7 @@ public:
 								  G4double, G4double, G4bool);
 	void SetTimeLimits(G4double, G4double);
 	G4String NormalizeMoleculeName(const G4String& name);
-	
+
 
 	void QuitIfMoleculeNotFound(G4String mol);
 	void Quit(const G4String& name, G4String message);
@@ -36,13 +36,13 @@ private:
 	TsParameterManager* fPm;
 	TsIRTUtils* fUtils;
 	G4String fName;
-	
+
 	struct TsMoleculeDefinition {
 		G4double diffusionCoefficient;
 		G4double charge;
 		G4double radius;
 	};
-	
+
 public:
 	struct TsMolecularReaction {
 		G4int    index;
@@ -89,7 +89,7 @@ public:
 
 		G4int chemAlgo = -1; // To differentiate IRT from direct Gillespie
 	};
-	
+
 private:
 	std::map<G4int, TsMolecule> fMolecules;
 	std::map<G4int, TsMoleculeDefinition> fMoleculesDefinition;
@@ -98,47 +98,49 @@ private:
 	std::map<G4String, G4String> fExistingMolecules;
 	std::unordered_map<std::string, std::string> fGeant4NameOverrides;
 	std::set<G4String> fLoggedOverrides;
-	
+
 	std::map<G4int, TsMolecularReaction > fReactions;
 	std::map<G4int, std::vector<std::pair<G4int,G4int>>> fMoleculeCanReactWith;
-	
+
 	G4double fUpperTime;
 	G4double fLowerTime;
 	G4int fReactionID;
 	G4int fTotalBinaryReaction;
 	G4int fLastMoleculeID;
-	
+
 	G4double fTemperature;
 	G4bool fScaleForTemperature;
 	G4bool fKick;
-	
+
 	G4String fpHSolvent;
 	G4double fpHSolventConcentration;
 	G4double fpHValue;
-	G4double fMonovalentSalt; // NaCl, KCl, ...
-	G4double fDivalentSalt;   // MgCl2 ...
-	G4double fTrivalentSalt;   // FeCl3  ...
-	
-	
+	G4double fMonovalentSalt; // Generic A^+ B^- 
+	G4double fDivalentSalt;   // A^2+ B_2^- 
+	G4double fTrivalentSalt;   // A^3 + B_3^- eg FeCl3  ...
+	G4double fSaltNaCl;  // NaCl
+	G4double fSaltKCl;   // KCl
+	G4double fSaltMgCl2; // MgCl
+
 	G4bool fAllTotallyDiffusionControlled;
-	
+
 	void RegisterGeant4Aliases();
 public:
-	
+
 	G4double GetIndependentReactionTime(TsMolecule molA, TsMolecule molB, G4int indexOfReaction);
 	std::pair<G4int, G4double> SampleIRTFirstOrderAndBackgroundReactions(TsMolecule molA );
 	G4int ContactFirstOrderAndBackgroundReactions(TsMolecule molA );
-	
+
 	std::vector<G4ThreeVector> ResampleReactantsPosition(TsMolecule& molA, TsMolecule& molB, G4int index, G4double time);
 	std::vector<G4ThreeVector> GetBackgroundPositionOfProducts(TsMolecule molA, G4int index);
 
 	G4bool Inside(G4ThreeVector p);
-	
+
 	void ScoreGvalue(std::vector<TsMolecule> &initialSpecies,
 					 std::map<G4int, std::map<G4int, G4int>> &theGvalueInVolume,
 					 std::vector<G4double> timeSteps,
 					 G4int iM, G4int jM, G4int indexOfReaction, G4double irt);
-	
+
 	// Get functions
 	G4double GetMoleculeRadius(G4int);
 	G4int GetMoleculeCharge(G4int);
@@ -157,10 +159,10 @@ public:
 
 	std::map<G4int, std::vector<std::pair<G4int,G4int>>> GetReactability() {return fMoleculeCanReactWith;};
 	void Diffuse(TsMolecule& mol, G4double dt);
-	
+
 	void PrintMoleculesInformation();
 	void PrintReactionsInformation();
-	
+
 	// PH temperature adjust functions
 	void AdjustReactionRateForPH(G4String);
 	void AdjustReactionAndDiffusionRateForTemperature();
@@ -168,7 +170,7 @@ public:
 	std::vector<G4double> GetH2SO4ComponentsConcentrationPH(G4double);
 	G4double GetIonicStrength(std::vector<G4double>);
 	G4double GetIonicStrengthFromSalts(G4double fMonovalentSalt, G4double fDivalentSalt, G4double fTrivalentSalt);
-	std::vector<G4double> GetPhosphateBufferComponentsConcentrationPHandIonicStrength(G4double pH); 
+	std::vector<G4double> GetPhosphateBufferComponentsConcentrationPHandIonicStrength(G4double pH);
 
 	inline std::map<G4String, G4int> GetMoleculeIDs() {return fMoleculesID;};
 	inline std::map<G4int, G4String> GetMoleculeNames() { return fMoleculesName;};
