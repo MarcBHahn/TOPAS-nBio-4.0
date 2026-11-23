@@ -1435,7 +1435,7 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
 		HPO4Con = PhosphateComponents[4];
 		PO4Con = PhosphateComponents[5];
         G4cout << "-- Adjust ionic strength for phosphate buffer at pH "<< fpHValue<<" to " << Ionic <<G4endl;
-        G4cout << "-- Concentrations are H^+: "<< HCon <<", -^OH:"<<OHCon <<", H3O4:" << H3PO4Con <<", H2PO4^-:" << H2PO4Con<<", HPO4^2-:" << HPO4Con <<", PO4^3-:" << PO4Con <<G4endl;
+        G4cout << "-- Concentrations are H^+: "<< HCon <<", -^OH:"<< OHCon <<", H3O4:" << H3PO4Con <<", H2PO4^-:" << H2PO4Con<<", HPO4^2-:" << HPO4Con <<", PO4^3-:" << PO4Con <<G4endl;
 
 		if (fpHSolvent == "pbs" ){
 			// Add monovalent salts from 1xPBS
@@ -1554,8 +1554,9 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
             k_Before = fReactions[i].scavengingCapacity;
             fReactions[i].scavengingCapacity = newValue;
         };
-
-        if (chargedPair) {
+		
+		/* First adjust for ionic strength effects and standard pH*/
+		if (chargedPair) {
             if (!isScavenging) {
                 k_Before = fReactions[i].kobs;
                 fReactions[i].kobs = IonicRate(Ionic, fReactions[i]);
@@ -1576,19 +1577,28 @@ void TsIRTConfiguration::AdjustReactionRateForPH(G4String pHOrConcentration) {
                 setScavenging(fReactions[i].scavengingCapacity * OHCon / OHCon25);
             } else if (ReactB == "HSO4^-1") {
                 setScavenging(fReactions[i].scavengingCapacity * HSO4Con);
-			} else if (ReactB == "H3PO4^0") {
+            }
+        }
+		     
+        /* adjust for background capacity of PBS buffer components and salts */
+		if (isScavenging) {
+			// phosphate components
+			if (ReactB == "H3PO4^0") {
                 setScavenging(fReactions[i].scavengingCapacity * H3PO4Con);
             }
-            // Add dihydrogen phosphate Ion to the reactions with at least e_aq-  + H2P04- 1.9 X 10^7/Ms (Buxton 343 at pH5-7)
+            // Add at least dihydrogen phosphate ion +  e_aq- to the reaction list with: e_aq- + H2P04- as 1.9 X 10^7/Ms 
+            // (Buxton J. Phys. Chern. Ref. Data, Vol. 17, No.2, 1988  reaction 343 at pH5-7)
             else if (ReactB == "H2PO4^-1") {
                 setScavenging(fReactions[i].scavengingCapacity * H2PO4Con);
-            } else if (ReactB == "HPO4^-2") {
+            } 
+			else if (ReactB == "HPO4^-2") {
                 setScavenging(fReactions[i].scavengingCapacity * HPO4Con);
-            } else if (ReactB == "PO4^-3") {
+            } 
+			else if (ReactB == "PO4^-3") {
                 setScavenging(fReactions[i].scavengingCapacity * PO4Con);
             }
             // salt related scaling
-             else if (ReactB == "Cl^-1") {
+            else if (ReactB == "Cl^-1") {
                 setScavenging(fReactions[i].scavengingCapacity * ChlorideIon);
             }
             else if (ReactB == "Na^1") {
