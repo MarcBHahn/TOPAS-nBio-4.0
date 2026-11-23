@@ -1,0 +1,24 @@
+{
+  "jobDefinitionName": "topas-nbio-job",
+  "type": "container",
+  "platformCapabilities": ["EC2"],
+  "containerProperties": {
+    "image": "public.ecr.aws/q0u0d8d4/topas-nbio:topas-v4.3.0-geant4-11.3.2-amd64",
+    "resourceRequirements": [
+      { "type": "VCPU", "value": "4" },
+      { "type": "MEMORY", "value": "8192" }
+    ],
+    "environment": [
+      { "name": "INPUT_BUCKET", "value": "topas-nbio-input" },
+      { "name": "OUTPUT_BUCKET", "value": "topas-nbio-output" }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/aws/batch/topas-nbio",
+        "awslogs-region": "us-east-1"
+      }
+    }
+  },
+  "retryStrategy": { "attempts": 1 }
+}

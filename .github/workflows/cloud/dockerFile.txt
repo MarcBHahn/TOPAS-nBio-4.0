@@ -1,0 +1,126 @@
+# ============================================================================================================= #
+#                                                                                                               #
+# This file contains the Docker instructions to build the TOPAS-nBio image for AWS Batch.                       #
+#                                                                                                               #
+# 1. The OpenTOPAS docker image (https://hub.docker.com/r/opentopas/opentopas) is used as the base image.       #
+# 2. The G4Data files are downloaded and extracted into the image.                                              #
+# 3. The TOPAS-nBio source code is copied into the image.                                                       #
+# 4. OpenTOPAS is rebuilt with the TOPAS-nBio extension and installed over the original                         #
+# 5. The AWS CLI is installed so that the container can sync your input and output files with S3.               #
+# 6. A batch-mode script is added and only used when the image is running on AWS Batch. When the env variable   #  
+#    TOPAS_AWS_BATCH_MODE is set, the topas entrypoint script is modified to first exec the batch-mode script.  #
+#    Consequently, the image can be used on AWS Batch, but still works locally by following the OpenTOPAS       #
+#    instructions defined in OpenTOPAS/docker/README.Docker.md, in which case the normal exec topas @ is used.  #                                               #
+# ============================================================================================================= #
+
+# 1. Start building this image from the official OpenTOPAS docker image
+ARG OPENTOPAS_IMAGE=opentopas/opentopas:v4.3.0-geant4-11.3.2-amd64
+FROM ${OPENTOPAS_IMAGE}
+
+# 2. Installing G4Data files into the image
+RUN mkdir -p /Applications/G4Data && cd /Applications/G4Data && \
+wget -q https://cern.ch/geant4-data/datasets/G4NDL.4.7.1.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4EMLOW.8.6.1.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4PhotonEvaporation.6.1.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4RadioactiveDecay.6.1.2.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4PARTICLEXS.4.1.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4PII.1.3.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4RealSurface.2.2.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4SAIDDATA.2.0.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4ABLA.3.3.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4INCL.1.2.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4ENSDFSTATE.3.0.tar.gz && \
+wget -q https://cern.ch/geant4-data/datasets/G4TENDL.1.4.tar.gz && \
+wget -q ftp://gdo-nuclear.ucllnl.org/LEND_GND1.3/LEND_GND1.3_ENDF.BVII.1.tar.gz && \
+tar zxf G4NDL.4.7.1.tar.gz && \
+tar zxf G4EMLOW.8.6.1.tar.gz && \
+tar zxf G4PhotonEvaporation.6.1.tar.gz && \
+tar zxf G4RadioactiveDecay.6.1.2.tar.gz && \
+tar zxf G4PARTICLEXS.4.1.tar.gz && \
+tar zxf G4PII.1.3.tar.gz && \
+tar zxf G4RealSurface.2.2.tar.gz && \
+tar zxf G4SAIDDATA.2.0.tar.gz && \
+tar zxf G4ABLA.3.3.tar.gz && \
+tar zxf G4INCL.1.2.tar.gz && \
+tar zxf G4ENSDFSTATE.3.0.tar.gz && \
+tar zxf G4TENDL.1.4.tar.gz && \
+tar zxf LEND_GND1.3_ENDF.BVII.1.tar.gz && \
+rm *.tar.gz
+
+# 3. Copy the TOPAS-nBio extension source code into the image under /extensions/src
+COPY . /extensions/src
+
+# 4. Re-build OpenTOPAS with TOPAS-nBio and replace the original -build and -install directories.
+# NOTE: As of 06 Feb 2026 the opentopas docker image (https://hub.docker.com/r/opentopas/opentopas) is for qt5 and does not support qt6.
+# When this gets updated to qt6 the cmake command -DTOPAS_USE_QT6=ON should be added below.
+RUN cd /Applications/TOPAS/OpenTOPAS-build && \
+    cmake /Applications/TOPAS/OpenTOPAS \
+        -DCMAKE_INSTALL_PREFIX=/Applications/TOPAS/OpenTOPAS-install \
+        -DTOPAS_EXTENSIONS_DIR=/extensions/src \
+        -DTOPAS_USE_QT=ON && \
+    make -j$(nproc) install && \
+    rm -rf /extensions
+
+# 5. Install awscli. This allows the container to interact with AWS services.
+RUN apt-get update && \
+DEBIAN_FRONTEND=noninteractive apt-get install -y awscli && \
+apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 6. Batch-mode wrapper script used when running under AWS Batch.
+# This keeps the entrypoint modification simple and makes it easier to maintain the otherwise more complex S3 + TOPAS logic.
+RUN cat <<'EOF' >/usr/local/bin/topas-batch-mode.sh
+#!/bin/bash
+
+echo "Running in AWS Batch mode: syncing from S3, running TOPAS, syncing to S3"
+
+# Create working directories
+mkdir -p /work/input /work/run /work/output
+
+# Sync inputs from the input bucket into /work/input
+aws s3 sync "s3://${INPUT_BUCKET}/${SIM_DIR}/" /work/input/
+
+# Copy contents of /work/input into /work/run so that the parameter files to be run live directly under /work/run
+cp -r /work/input/. /work/run/
+
+cd /work/run
+
+# Record the list of files before the simulation
+find . -type f -print | sort > /work/before.txt
+
+# Run TOPAS; capture stdout/stderr into a log file
+/Applications/TOPAS/OpenTOPAS-install/bin/topas "${FILE_TO_RUN}" 2>&1 | tee topas.log
+
+# Record the list of files after the simulation
+find . -type f -print | sort > /work/after.txt
+
+# Determine which files are new (present after, but not before) and copy only those into 
+# /work/output (preserving directory structure).
+comm -13 /work/before.txt /work/after.txt | while read -r path; do
+  mkdir -p "/work/output/$(dirname "$path")"
+  cp "./$path" "/work/output/$path"
+done
+
+# Create a small log file with basic AWS job details inside outputs
+# More details such as memory, cpu utilization, etc. are available in the CloudWatch logs.
+LOG_FILE="/work/output/aws_job_details.log"
+{
+  echo "AWS_BATCH_JOB_ID=${AWS_BATCH_JOB_ID:-}"
+  echo "JOB_INDEX=${JOB_INDEX:-}"
+  echo "INPUT_BUCKET=${INPUT_BUCKET:-}"
+  echo "OUTPUT_BUCKET=${OUTPUT_BUCKET:-}"
+  echo "SIM_DIR=${SIM_DIR:-}"
+  echo "FILE_TO_RUN=${FILE_TO_RUN:-}"
+} > "$LOG_FILE"
+
+# Sync inputs and outputs back to the output bucket using the same SIM_DIR layout as inputs.
+aws s3 sync /work/input/  "s3://${OUTPUT_BUCKET}/${SIM_DIR}/inputs/"
+aws s3 sync /work/output/ "s3://${OUTPUT_BUCKET}/${SIM_DIR}/outputs/"
+
+exit 0
+EOF
+
+RUN chmod +x /usr/local/bin/topas-batch-mode.sh
+
+# Insert AWS Batch mode block before "exec topas" in the existing entrypoint script.
+# When TOPAS_AWS_BATCH_MODE=1, i.e. when using the image on AWS Batch, execute the batch-mode script instead of exec topas @
+RUN sed -i '/^exec topas "\$@"/i if [[ "\${TOPAS_AWS_BATCH_MODE:-}" == "1" ]]; then exec /usr/local/bin/topas-batch-mode.sh; fi' /usr/local/bin/topas-entrypoint.sh

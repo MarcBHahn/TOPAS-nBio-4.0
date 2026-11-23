@@ -1,0 +1,23 @@
+{
+  "jobDefinitionName": "topas-nbio-postprocess-job",
+  "type": "container",
+  "platformCapabilities": ["EC2"],
+  "containerProperties": {
+    "image": "public.ecr.aws/q0u0d8d4/topas-nbio:postprocessing",
+    "resourceRequirements": [
+      { "type": "VCPU", "value": "1" },
+      { "type": "MEMORY", "value": "2048" }
+    ],
+    "environment": [
+      { "name": "OUTPUT_BUCKET", "value": "topas-nbio-output" }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/aws/batch/topas-nbio",
+        "awslogs-region": "us-east-1"
+      }
+    }
+  },
+  "retryStrategy": { "attempts": 1 }
+}
